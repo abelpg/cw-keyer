@@ -5,6 +5,7 @@ import java.util.Optional;
 import net.codecrete.usb.Usb;
 import net.codecrete.usb.UsbDevice;
 
+@Slf4j
 public class CwKeyer {
 
 
@@ -29,7 +30,6 @@ public class CwKeyer {
     System.out.println("Found CW Keyer device interfaces: " + device.getInterfaces().getFirst().getNumber());
 
     try {
-      device.detachStandardDrivers();
       device.open();
       device.claimInterface(1);
 
@@ -44,7 +44,6 @@ public class CwKeyer {
       try {
         device.releaseInterface(1);
         device.close();
-        device.attachStandardDrivers();
       } catch (Exception e) {
         System.err.println("Failed to release interface: " + e.getMessage());
       }
