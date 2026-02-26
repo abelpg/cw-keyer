@@ -2,6 +2,7 @@ package org.abelpg.cwkeyer;
 
 import java.util.Optional;
 
+import lombok.extern.slf4j.Slf4j;
 import net.codecrete.usb.Usb;
 import net.codecrete.usb.UsbDevice;
 
@@ -14,38 +15,38 @@ public class CwKeyer {
 
   // https://github.com/manuelbl/JavaDoesUSB
   public static void main(String[] args) {
-    System.out.println("Hello, CW Keyer!");
+    log.debug("Starting CW Keyer application...");
     for (var device : Usb.getDevices()) {
       System.out.println(device);
     }
 
     final Optional<UsbDevice> optionalDevice = Usb.findDevice(VID, PID);
     if (optionalDevice.isEmpty()) {
-      System.out.printf("No USB device with VID=0x%04x and PID=0x%04x found.%n", VID, PID);
+      log.info("No USB device with VID={} and PID={} ", VID, PID);
       return;
     }
 
     final UsbDevice device = optionalDevice.get();
 
-    System.out.println("Found CW Keyer device interfaces: " + device.getInterfaces().getFirst().getNumber());
+    log.info("Found CW Keyer device interfaces: {}" , device.getInterfaces().getFirst().getNumber());
 
     try {
       device.open();
-      device.claimInterface(1);
+      device.claimInterface(0);
 
       byte [] arrayBytes = optionalDevice.get().transferIn(0x81, 64);
 
       System.out.println(arrayBytes);
 
     } catch (Exception e) {
-      System.err.println("Failed to claim interface: " + e.getMessage());
+      log.error("Failed to claim interface: " ,e);
       return;
     } finally {
       try {
-        device.releaseInterface(1);
+        device.releaseInterface(0);
         device.close();
       } catch (Exception e) {
-        System.err.println("Failed to release interface: " + e.getMessage());
+        log.error("Failed to claim interface: " ,e);
       }
     }
 
