@@ -10,6 +10,7 @@ class Keyboard:
         self._controller = Controller()
         #self._kbListener.start()
 
+
     def _on_press_key(self, key):
         if key == Key.esc:
             self._esc_pressed = True
@@ -19,6 +20,9 @@ class Keyboard:
 
     def start(self):
         self._kbListener.start()
+
+    def stop(self):
+        self._kbListener.stop()
 
     def press_ctrl_r(self):
         self._controller.press(Key.ctrl_r)

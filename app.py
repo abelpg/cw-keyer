@@ -18,4 +18,5 @@ while not keyboard.is_esc_pressed():
     sleep(0.5)
 
 usb_device.stop()
+keyboard.stop()
 

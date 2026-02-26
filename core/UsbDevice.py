@@ -52,17 +52,36 @@ class UsbDevice:
                         return interface, endpoint
         return None, None
 
+    def _set_dit(self, dit):
+        self._dit = dit
+
+        if dit:
+            self._keyboard.press_ctrl_l()
+        else:
+            self._keyboard.release_ctrl_l()
+
+    def _set_dah(self, dah):
+        self._dah = dah
+
+        if dah:
+            self._keyboard.press_ctrl_r()
+        else:
+            self._keyboard.release_ctrl_r()
+
     def _set_dit_dah(self, dit, dah):
 
+        # Set dit
         if dit and not self._dit:
-            self._keyboard.press_ctrl_l()
+            self._set_dit(True)
         elif not dit and self._dit:
-            self._keyboard.release_ctrl_l()
+            self._set_dit(False)
 
+        # Set dah
         if dah and not self._dah:
-            self._keyboard.press_ctrl_r()
+            self._set_dah(True)
         elif not dah and self._dah:
-            self._keyboard.release_ctrl_l()
+            self._set_dah(False)
+
 
 
 
@@ -79,6 +98,8 @@ class UsbDevice:
                     self._set_dit_dah(True,False)
                 elif data[0] == self.CLICK_RIGHT:
                     self._set_dit_dah(False,True)
+                else:
+                    self._set_dit_dah(False,False)
 
             except usb.core.USBError as e:
                 data = None
