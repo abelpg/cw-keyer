@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<cache xmlns="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/BUILD-CACHE-CONFIG/1.0.0 https://maven.apache.org/xsd/build-cache-config-1.0.0.xsd">
+
+  <configuration>
+    <!-- Enable/Disable Maven build cache usage -->
+    <!-- Equivalent command line flag: -Dmaven.build.cache.enabled=<true|false> -->
+    <enabled>true</enabled>
+    <hashAlgorithm>SHA-256</hashAlgorithm>
+    <validateXml>true</validateXml>
+    <remote enabled="false" id="inditex-artifacts">
+      <url>https://inditex.jfrog.io/artifactory/build-cache-maven</url>
+    </remote>
+    <local>
+      <maxBuildsCached>10</maxBuildsCached>
+    </local>
+    <projectVersioning adjustMetaInf="true" />
+    <attachedOutputs>
+      <dirNames>
+        <dirName>.</dirName>
+      </dirNames>
+    </attachedOutputs>
+  </configuration>
+
+  <input>
+    <!-- Inputs that will be taken into account on checksum calculation -->
+    <global>
+      <glob>
+        <!-- Type of files to scan -->
+        {*.java,*.groovy,*.yml,*.yaml,*.svcd,*.proto,*assembly.xml,assembly*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat,*.properties,*.wsdl,*.json}
+      </glob>
+      <includes>
+        <!-- Files or directories could be manually included -->
+        <include>src/</include>
+      </includes>
+      <excludes>
+        <!-- Exclusion that will be avoided in the calculation. Specific paths or glob expresions could be added -->
+        <exclude>pom.xml</exclude>
+      </excludes>
+    </global>
+    <plugins>
+      <!-- Plugin-specific input calculation rules -->
+      <plugin artifactId="maven-surefire-plugin">
+        <effectivePom>
+          <!-- For effective pom calculation rules where you can add property exclusions -->
+          <excludeProperties>
+            <excludeProperty>skipTests</excludeProperty>
+            <excludeProperty>useSystemClassLoader</excludeProperty>
+          </excludeProperties>
+        </effectivePom>
+      </plugin>
+      <!-- Workaround to avoid hashing unnecessary paths inherited by amiga-assembly-maven-plugin config -->
+      <!-- More info: https://github.com/inditex/fwk-amigajava/issues/10327 -->
+      <plugin artifactId="amiga-assembly-maven-plugin">
+        <dirScan>
+          <!-- Specifies plugin level rules of configuration processing in search of referenced source files -->
+          <excludes>
+            <exclude tagName="inputs"/>
+          </excludes>
+        </dirScan>
+      </plugin>
+    </plugins>
+  </input>
+  <executionControl>
+    <runAlways>
+      <!-- Defines which plugins should always run regardless of an available cached status -->
+      <plugins>
+        <plugin artifactId="jacoco-maven-plugin" />
+      </plugins>
+      <goalsLists>
+        <goalsList artifactId="amiga-assembly-maven-plugin">
+          <goals>
+            <goal>amiga-assembly</goal>
+          </goals>
+        </goalsList>
+        <goalsList artifactId="maven-install-plugin">
+          <goals>
+            <goal>install</goal>
+          </goals>
+        </goalsList>
+        <goalsList artifactId="maven-deploy-plugin">
+          <goals>
+            <goal>deploy</goal>
+          </goals>
+        </goalsList>
+        <goalsList artifactId="maven-dependency-plugin">
+          <goals>
+            <goal>unpack</goal>
+          </goals>
+        </goalsList>
+        <goalsList artifactId="maven-resources-plugin">
+          <goals>
+            <goal>copy-resources</goal>
+          </goals>
+        </goalsList>
+      </goalsLists>
+    </runAlways>
+    <reconcile logAllProperties="true">
+      <!-- Specify which plugin should always run, based on plugin properties set in plugin configuration or by command flags -->
+      <plugins>
+        <plugin artifactId="maven-compiler-plugin" goal="compile">
+          <reconciles>
+            <reconcile propertyName="source" />
+            <reconcile propertyName="target" />
+            <reconcile propertyName="debug" />
+            <reconcile propertyName="debuglevel" />
+          </reconciles>
+          <logs>
+            <log propertyName="includes" />
+            <log propertyName="excludes" />
+            <log propertyName="argLine" />
+          </logs>
+        </plugin>
+        <plugin artifactId="maven-compiler-plugin" goal="testCompile">
+          <reconciles>
+            <reconcile propertyName="source" />
+            <reconcile propertyName="target" />
+            <reconcile propertyName="debug" />
+            <reconcile propertyName="debuglevel" />
+          </reconciles>
+          <logs>
+            <log propertyName="includes" />
+            <log propertyName="excludes" />
+            <log propertyName="argLine" />
+          </logs>
+        </plugin>
+        <plugin artifactId="maven-enforcer-plugin" goal="enforce">
+          <reconciles>
+            <reconcile propertyName="skip" skipValue="true" />
+          </reconciles>
+        </plugin>
+      </plugins>
+    </reconcile>
+  </executionControl>
+</cache>

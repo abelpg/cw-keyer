@@ -1,0 +1,13 @@
+<extensions xmlns="https://maven.apache.org/EXTENSIONS/1.0.0" xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://maven.apache.org/EXTENSIONS/1.0.0 https://maven.apache.org/xsd/core-extensions-1.0.0.xsd">
+  <extension>
+    <groupId>com.inditex.darwin.telemetry</groupId>
+    <artifactId>darwin-telemetry-maven-extension</artifactId>
+    <version>2.3.1</version>
+  </extension>
+  <extension>
+    <groupId>org.apache.maven.extensions</groupId>
+    <artifactId>maven-build-cache-extension</artifactId>
+    <version>1.2.2</version>
+  </extension>
+</extensions>

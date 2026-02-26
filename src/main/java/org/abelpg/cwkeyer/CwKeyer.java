@@ -28,10 +28,6 @@ public class CwKeyer {
 
     System.out.println("Found CW Keyer device interfaces: " + device.getInterfaces().getFirst().getNumber());
 
-
-
-
-
     try {
       device.detachStandardDrivers();
       device.open();
