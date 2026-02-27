@@ -1,10 +1,11 @@
-import os
 import threading
-
-#os.environ['PYUSB_DEBUG'] = 'debug'
 import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
+#os.environ['PYUSB_DEBUG'] = 'debug'
+from typing import List
+from core.KeyerObserver import KeyerObserver
+
 
 class UsbDevice:
 
@@ -14,7 +15,8 @@ class UsbDevice:
     CLICK_RIGHT = 0x02
     CLICK_BOTH = 0x03
 
-    def __init__(self, id_vendor, id_product, keyboard = None):
+    # Init USB device
+    def __init__(self, id_vendor, id_product):
         self._id_vendor = id_vendor
         self._id_product = id_product
 
@@ -34,8 +36,13 @@ class UsbDevice:
         self._dit = None
         self._dah = None
 
-        self._keyboard = keyboard
-        
+        self._observers: List[KeyerObserver] = []
+
+    def attach_observer(self, observer: KeyerObserver):
+        self._observers.append(observer)
+
+    def detach_observer(self, observer: KeyerObserver):
+        self._observers.remove(observer)
 
     def start(self):
         self._thread.start()
@@ -43,7 +50,10 @@ class UsbDevice:
     def stop(self):
         self._stop = True
 
-
+    """
+    Find the interface and endpoint of the USB device. It will look for the interface and endpoint that match the.
+    Improve: calculate the endpoint address and packet size from the device instead of hardcoding it.
+    """
     def _find_interface_endpoint(self):
         for config in self._device.configurations():
             for interface in config.interfaces():
@@ -55,19 +65,19 @@ class UsbDevice:
     def _set_dit(self, dit):
         self._dit = dit
 
-        if dit:
-            self._keyboard.press_ctrl_l()
-        else:
-            self._keyboard.release_ctrl_l()
+        for observer in self._observers:
+            observer.on_dit(dit)
 
     def _set_dah(self, dah):
         self._dah = dah
 
-        if dah:
-            self._keyboard.press_ctrl_r()
-        else:
-            self._keyboard.release_ctrl_r()
+        for observer in self._observers:
+            observer.on_dah(dah)
 
+    """
+    Set dit and dah values and control the state of the keyer. This is used to avoid concurrent modification of dit and 
+    dah values when both are set at the same time.
+    """
     def _set_dit_dah(self, dit, dah):
 
         # Set dit
@@ -82,11 +92,13 @@ class UsbDevice:
         elif not dah and self._dah:
             self._set_dah(False)
 
-
-
-
+    """
+    Main loop to collect data from the USB device. It will read data from the device and set the dit and dah values 
+    accordingly.
+    """
     def _run_usb_device_collect(self):
 
+        # Claim interface
         usb.util.claim_interface(self._device, self._interface)
 
         while not self._stop:
@@ -106,4 +118,5 @@ class UsbDevice:
                 if e.args == ('Operation timed out',):
                     continue
 
+        # Release interface
         usb.util.release_interface(self._device, self._interface)

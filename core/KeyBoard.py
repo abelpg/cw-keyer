@@ -1,7 +1,9 @@
-
 from pynput.keyboard import Key, Controller, Listener
+from core.KeyerObserver import KeyerObserver
 
-class Keyboard:
+
+
+class Keyboard(KeyerObserver):
 
     def __init__(self):
         # KB listener
@@ -10,10 +12,6 @@ class Keyboard:
         self._controller = Controller()
         #self._kbListener.start()
 
-
-    def _on_press_key(self, key):
-        if key == Key.esc:
-            self._esc_pressed = True
 
     def is_esc_pressed(self):
         return self._esc_pressed
@@ -24,14 +22,20 @@ class Keyboard:
     def stop(self):
         self._kbListener.stop()
 
-    def press_ctrl_r(self):
-        self._controller.press(Key.ctrl_r)
 
-    def press_ctrl_l(self):
-        self._controller.press(Key.ctrl_l)
+    def on_dah(self, pressed:bool):
+        if pressed:
+            self._controller.press(Key.ctrl_r)
+        else :
+            self._controller.release(Key.ctrl_r)
 
-    def release_ctrl_r(self):
-        self._controller.release(Key.ctrl_r)
+    def on_dit(self, pressed:bool):
+        if pressed:
+            self._controller.press(Key.ctrl_l)
+        else :
+            self._controller.release(Key.ctrl_l)
 
-    def release_ctrl_l(self):
-        self._controller.release(Key.ctrl_l)
+    ####################################################################################################################
+    def _on_press_key(self, key):
+        if key == Key.esc:
+            self._esc_pressed = True
