@@ -1,11 +1,13 @@
 import threading
+from time import time
+
 import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
 #os.environ['PYUSB_DEBUG'] = 'debug'
 from typing import List
 from core.KeyerObserver import KeyerObserver
-
+from concurrent.futures import ThreadPoolExecutor
 
 class UsbDevice:
 
@@ -14,6 +16,8 @@ class UsbDevice:
     CLICK_LEFT = 0x01
     CLICK_RIGHT = 0x02
     CLICK_BOTH = 0x03
+
+
 
     # Init USB device
     def __init__(self, id_vendor, id_product):
@@ -37,6 +41,8 @@ class UsbDevice:
         self._dah = None
 
         self._observers: List[KeyerObserver] = []
+        self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
+        self._thread_lock = threading.Lock()
 
     def attach_observer(self, observer: KeyerObserver):
         self._observers.append(observer)
@@ -64,33 +70,32 @@ class UsbDevice:
 
     def _set_dit(self, dit):
         self._dit = dit
-
         for observer in self._observers:
-            observer.on_dit(dit)
+            self._thread_pool.submit(observer.on_dit,dit)
+
 
     def _set_dah(self, dah):
         self._dah = dah
-
         for observer in self._observers:
-            observer.on_dah(dah)
+            self._thread_pool.submit(observer.on_dah,dah)
 
     """
     Set dit and dah values and control the state of the keyer. This is used to avoid concurrent modification of dit and 
     dah values when both are set at the same time.
     """
     def _set_dit_dah(self, dit, dah):
+        with self._thread_lock:
+            # Set dit
+            if dit and not self._dit:
+                self._set_dit(True)
+            elif not dit and self._dit:
+                self._set_dit(False)
 
-        # Set dit
-        if dit and not self._dit:
-            self._set_dit(True)
-        elif not dit and self._dit:
-            self._set_dit(False)
-
-        # Set dah
-        if dah and not self._dah:
-            self._set_dah(True)
-        elif not dah and self._dah:
-            self._set_dah(False)
+            # Set dah
+            if dah and not self._dah:
+                self._set_dah(True)
+            elif not dah and self._dah:
+                self._set_dah(False)
 
     """
     Main loop to collect data from the USB device. It will read data from the device and set the dit and dah values 
@@ -105,13 +110,14 @@ class UsbDevice:
             try:
                 data = self._device.read(self._endpoint.bEndpointAddress,self._endpoint.wMaxPacketSize)
                 if data[0] == self.CLICK_BOTH:
-                    self._set_dit_dah(True,True)
+                    self._set_dit_dah( True,True)
                 elif data[0] == self.CLICK_LEFT:
-                    self._set_dit_dah(True,False)
+                    self._set_dit_dah( True,False)
                 elif data[0] == self.CLICK_RIGHT:
                     self._set_dit_dah(False,True)
                 else:
-                    self._set_dit_dah(False,False)
+                    self._set_dit_dah(False, False)
+
 
             except usb.core.USBError as e:
                 data = None

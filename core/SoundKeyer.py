@@ -92,9 +92,9 @@ class SoundKeyer(KeyerObserver):
         character_time = self._character_time / 1000.0
         space_time = self._character_space_time / 1000.0
         self._tone_generator.play_bg_tone(character_time, space_time)
-        sleep(space_time + character_time)
+        sleep( character_time + space_time)
         self._set_dit(False)
-        print("DIT {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, space_time + character_time))
+        print("DIT {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, character_time))
 
     # Play dah and release dah
     def play_dah(self):
@@ -102,9 +102,9 @@ class SoundKeyer(KeyerObserver):
         character_time = self._character_time * 2 / 1000.0
         space_time = self._character_space_time / 1000.0
         self._tone_generator.play_bg_tone(character_time,  space_time)
-        sleep(space_time+character_time)
+        sleep(character_time + space_time)
         self._set_dah(False)
-        print("DAH {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, space_time + character_time ))
+        print("DAH {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0,  character_time ))
 
     def _set_dit(self, dit: bool):
         if self._dit != dit:
@@ -118,7 +118,7 @@ class SoundKeyer(KeyerObserver):
 
     def _run_iambic(self):
         while not self._thread_stop:
-
+            ts = time()
             # If detects key pressed correct dit/dah values
             if self._dit_pressed:
                 self._set_dit(True)
@@ -128,9 +128,11 @@ class SoundKeyer(KeyerObserver):
             if self._dit and self._dah:
                 self.play_dit()
                 self.play_dah()
-
             elif self._dit:
                 self.play_dit()
-
             elif self._dah:
                 self.play_dah()
+            else:
+                # always sleep for the character space time to avoid busy waiting and to give time for the keyer to release the keys
+                sleep(self._character_space_time / 1000.0)
+            #print("Bucle {}ms".format(np.ceil((time() - ts) * 1000) / 1000.0))
