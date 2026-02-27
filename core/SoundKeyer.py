@@ -1,11 +1,14 @@
 import threading
 import numpy as np
-from time import time
+from time import time, sleep
 from core.ToneGenerator import ToneGenerator
 from core.KeyerObserver import KeyerObserver
 
 
 class SoundKeyer(KeyerObserver):
+
+    # 1WPM dit = 1200 ms mark, 1200 ms space
+    TIME_BASE = 1200
 
     # State machine init. dit dah
     def __init__(self, wpm : int = 10):
@@ -16,11 +19,8 @@ class SoundKeyer(KeyerObserver):
         self._dit_pressed = False
         self._dah_pressed = False
 
-        # wmp
-        self._wpm = wpm
-
         # Tone
-        self._tone_generator = ToneGenerator(frequency=600, amplitude=0.5)
+        self._tone_generator = ToneGenerator(frequency=800, amplitude=0.5)
 
         # Principal thread to tak tics from dit and dah
         self._thread = threading.Thread(target=self._run_iambic, daemon=True)
@@ -29,6 +29,27 @@ class SoundKeyer(KeyerObserver):
         # Locks to prevent concurrent modification
         self._thread_lock_dit = threading.Lock()
         self._thread_lock_dah = threading.Lock()
+
+        # wmp
+        self._character_time, self._character_space_time = self._calculate(wpm)
+
+
+    """
+    So the word PARIS has been chosen to represent the standard word length for measuring the speed of sending CW.    
+    The word PARIS comprises a total of 50 units; one unit is the length of one dit. Those 50 units are made up of 22 mark units and 28 space units.
+    """
+    def _calculate(self, wpm):
+        # Calculate space times for Farnsworth (word rate < char rate)
+        # There are 50 units in "PARIS " - 36 are in the characters, 14 are in the spaces
+        t_total = (self.TIME_BASE / wpm) * 50
+        t_chars = (self.TIME_BASE / wpm) * 36
+        space_time = (t_total - t_chars) / 14  # Time for 1 space (ms)
+        # Character and word spacing
+        character_space_time = space_time * 2
+        word_space_time = space_time * 4
+        character_time = self.TIME_BASE / wpm
+        print("Total time for PARIS: character time: {}ms, character space time: {}ms,  word space time: {}ms".format(character_time, character_space_time,word_space_time))
+        return character_time, character_space_time
 
 
     def is_running(self) :
@@ -67,16 +88,23 @@ class SoundKeyer(KeyerObserver):
 
     # Play dit and release dit
     def play_dit(self):
-        t = 1.2 / float(self._wpm)
-        self._tone_generator.play_tone(t, t)
+        ts = time()
+        character_time = self._character_time / 1000.0
+        space_time = self._character_space_time / 1000.0
+        self._tone_generator.play_bg_tone(character_time, space_time)
+        sleep(space_time + character_time)
         self._set_dit(False)
+        print("DIT {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, space_time + character_time))
 
     # Play dah and release dah
     def play_dah(self):
-        t = 2.5 / float(self._wpm)
-        self._tone_generator.play_tone(t, t)
+        ts = time()
+        character_time = self._character_time * 2 / 1000.0
+        space_time = self._character_space_time / 1000.0
+        self._tone_generator.play_bg_tone(character_time,  space_time)
+        sleep(space_time+character_time)
         self._set_dah(False)
-
+        print("DAH {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, space_time + character_time ))
 
     def _set_dit(self, dit: bool):
         if self._dit != dit:
@@ -96,14 +124,13 @@ class SoundKeyer(KeyerObserver):
                 self._set_dit(True)
             if self._dah_pressed:
                 self._set_dah(True)
-            ts = time()
+
             if self._dit and self._dah:
                 self.play_dit()
                 self.play_dah()
-                print("DIT DAH {}ms".format( np.ceil((time() - ts) * 1000 )))
+
             elif self._dit:
                 self.play_dit()
-                print("DIT {}ms".format(np.ceil((time() - ts) * 1000 )))
+
             elif self._dah:
                 self.play_dah()
-                print("DAH {}ms".format(np.ceil((time() - ts) * 1000 )))
