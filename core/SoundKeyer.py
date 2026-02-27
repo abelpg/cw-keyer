@@ -89,15 +89,17 @@ class SoundKeyer(KeyerObserver):
 
     # Play dit and release dit
     def play_dit(self):
-        self._tone_generator.play_bg_tone(self._character_time, (self._character_space_time / 2))
-        total = self._character_time + (self._character_space_time / 2)
-        sleep( total )
+        space = self._character_space_time / 2
+
+        self._tone_generator.play_bg_tone(self._character_time +(space / 3.0 )  , (space / 3.0) * 2.0 )
+        total = self._character_time + space
+        sleep(total)
         self._set_dit(False)
         print("DIT {}s ".format( total))
 
     # Play dah and release dah
     def play_dah(self):
-        self._tone_generator.play_bg_tone(self._character_time * 2,  self._character_space_time)
+        self._tone_generator.play_bg_tone(self._character_time * 2 + (self._character_space_time / 3.0),  (self._character_space_time / 3.0) * 2.0 )
         total = self._character_time * 2 + self._character_space_time
         sleep(total)
         self._set_dah(False)

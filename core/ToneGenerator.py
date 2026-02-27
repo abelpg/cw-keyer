@@ -5,7 +5,7 @@ import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 
 class ToneGenerator:
-    def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 800, amplitude: float = 0.50):
+    def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 800, amplitude: float = 1):
         # Init audio
         self._audio = pyaudio.PyAudio()
 

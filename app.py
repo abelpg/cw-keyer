@@ -16,7 +16,7 @@ sound_keyer.start()
 
 usb_device = UsbDevice(0x413d,0x2107)
 usb_device.attach_observer(keyboard)
-#usb_device.attach_observer(sound_keyer)
+usb_device.attach_observer(sound_keyer)
 usb_device.start()
 
 while not keyboard.is_esc_pressed():
