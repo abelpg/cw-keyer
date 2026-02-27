@@ -42,7 +42,6 @@ class UsbDevice:
 
         self._observers: List[KeyerObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
-        self._thread_lock = threading.Lock()
 
     def attach_observer(self, observer: KeyerObserver):
         self._observers.append(observer)
@@ -84,18 +83,17 @@ class UsbDevice:
     dah values when both are set at the same time.
     """
     def _set_dit_dah(self, dit, dah):
-        with self._thread_lock:
-            # Set dit
-            if dit and not self._dit:
-                self._set_dit(True)
-            elif not dit and self._dit:
-                self._set_dit(False)
+        # Set dit
+        if dit and not self._dit:
+            self._set_dit(True)
+        elif not dit and self._dit:
+            self._set_dit(False)
 
-            # Set dah
-            if dah and not self._dah:
-                self._set_dah(True)
-            elif not dah and self._dah:
-                self._set_dah(False)
+        # Set dah
+        if dah and not self._dah:
+            self._set_dah(True)
+        elif not dah and self._dah:
+            self._set_dah(False)
 
     """
     Main loop to collect data from the USB device. It will read data from the device and set the dit and dah values 
