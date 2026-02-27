@@ -44,11 +44,12 @@ class SoundKeyer(KeyerObserver):
         t_total = (self.TIME_BASE / wpm) * 50
         t_chars = (self.TIME_BASE / wpm) * 36
         space_time = (t_total - t_chars) / 14  # Time for 1 space (ms)
-        # Character and word spacing
-        character_space_time = space_time * 2
-        word_space_time = space_time * 4
-        character_time = self.TIME_BASE / wpm
-        print("Total time for PARIS: character time: {}ms, character space time: {}ms,  word space time: {}ms".format(character_time, character_space_time,word_space_time))
+        # Character and word spacing in seconds, rounded to 3 decimals
+        character_space_time = space_time * 2  / 1000.0
+        word_space_time = space_time * 4 / 1000.0
+        character_time = self.TIME_BASE / float(wpm) / 1000.0
+
+        print("Total time for PARIS: character time: {}s, character space time: {}s,  word space time: {}s".format(character_time, character_space_time,word_space_time))
         return character_time, character_space_time
 
 
@@ -88,23 +89,19 @@ class SoundKeyer(KeyerObserver):
 
     # Play dit and release dit
     def play_dit(self):
-        ts = time()
-        character_time = self._character_time / 1000.0
-        space_time = self._character_space_time / 1000.0
-        self._tone_generator.play_bg_tone(character_time, space_time)
-        sleep( character_time + space_time)
+        self._tone_generator.play_bg_tone(self._character_time, (self._character_space_time / 2))
+        total = self._character_time + (self._character_space_time / 2)
+        sleep( total )
         self._set_dit(False)
-        print("DIT {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0, character_time))
+        print("DIT {}s ".format( total))
 
     # Play dah and release dah
     def play_dah(self):
-        ts = time()
-        character_time = self._character_time * 2 / 1000.0
-        space_time = self._character_space_time / 1000.0
-        self._tone_generator.play_bg_tone(character_time,  space_time)
-        sleep(character_time + space_time)
+        self._tone_generator.play_bg_tone(self._character_time * 2,  self._character_space_time)
+        total = self._character_time * 2 + self._character_space_time
+        sleep(total)
         self._set_dah(False)
-        print("DAH {}ms / {}ms".format(np.ceil((time() - ts)*1000) /1000.0,  character_time ))
+        print("DAH {}s".format(total))
 
     def _set_dit(self, dit: bool):
         if self._dit != dit:

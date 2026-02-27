@@ -11,8 +11,8 @@ from core.UsbDevice import UsbDevice
 keyboard = Keyboard()
 keyboard.start()
 
-#sound_keyer = SoundKeyer(wpm=20)
-#sound_keyer.start()
+sound_keyer = SoundKeyer(wpm=20)
+sound_keyer.start()
 
 usb_device = UsbDevice(0x413d,0x2107)
 usb_device.attach_observer(keyboard)
@@ -20,9 +20,9 @@ usb_device.attach_observer(keyboard)
 usb_device.start()
 
 while not keyboard.is_esc_pressed():
-    sleep(0.05)
+    sleep(0.1)
 
 usb_device.stop()
-#sound_keyer.stop()
+sound_keyer.stop()
 keyboard.stop()
 
