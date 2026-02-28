@@ -31,14 +31,21 @@ class UsbDevice(Device):
         if self._interface is None or self._endpoint is None:
             raise ValueError('No interface or endpoint found')
 
-        self._stop = False
-        self._thread = threading.Thread(target=self._run_usb_device_collect, daemon=True)
+        self._stop = True
+        self._thread = None
 
     def start(self):
-        self._thread.start()
+        if self._stop:
+            self._thread = threading.Thread(target=self._run_usb_device_collect, daemon=True)
+            self._thread.start()
+            self._stop = False
 
     def stop(self):
-        self._stop = True
+        if not self._stop:
+            self._stop = True
+
+    def is_running(self):
+        return not self._stop
 
     """
     Find the interface and endpoint of the USB device. It will look for the interface and endpoint that match the.
@@ -75,7 +82,7 @@ class UsbDevice(Device):
     accordingly.
     """
     def _run_usb_device_collect(self):
-
+        print("Starting USB device collect thread.")
         # Claim interface
         usb.util.claim_interface(self._device, self._interface)
 
@@ -99,3 +106,4 @@ class UsbDevice(Device):
 
         # Release interface
         usb.util.release_interface(self._device, self._interface)
+        print("Stopped USB device collect thread.")

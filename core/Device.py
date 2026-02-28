@@ -12,9 +12,11 @@ class Device(ABC):
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
 
     def attach_observer(self, observer: DeviceObserver):
+        print("attach observer to device")
         self._observers.append(observer)
 
     def detach_observer(self, observer: DeviceObserver):
+        print("detach observer to device")
         self._observers.remove(observer)
 
     def _set_dit(self, dit):
