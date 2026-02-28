@@ -2,10 +2,8 @@ import struct
 
 import pyaudio
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
-
 class ToneGenerator:
-    def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 800, amplitude: float = 1):
+    def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 600, amplitude: float = 0.5):
         # Init audio
         self._audio = pyaudio.PyAudio()
 
@@ -20,7 +18,6 @@ class ToneGenerator:
 
         self._tone_cycle = None
         self._silence_cycle = None
-        self._thread_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ToneGeneratorThreadPool")
 
 
 
@@ -55,11 +52,6 @@ class ToneGenerator:
             silence_cycles = int(self._frequency * silence_duration)
             for n in range(silence_cycles):
                 self._audio_stream.write(self._silence_cycle)
-
-    def play_bg_tone(self, tone_duration: float, silence_duration: float = 0):
-        self._thread_pool.submit(self.play_tone, tone_duration, silence_duration)
-
-
 
     def start(self):
         self._audio_stream = self._audio.open(format=pyaudio.paFloat32,

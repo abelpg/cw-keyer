@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 """
 Interface for observing keyer events. Implement this interface to receive notifications when the dit or dah is pressed or released.
 """
-class KeyerObserver(ABC):
+class UsbDeviceObserver(ABC):
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.

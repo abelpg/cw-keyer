@@ -6,7 +6,7 @@ import usb.backend.libusb1 as libusb1
 import usb.core
 #os.environ['PYUSB_DEBUG'] = 'debug'
 from typing import List
-from core.KeyerObserver import KeyerObserver
+from core.UsbDeviceObserver import UsbDeviceObserver
 from concurrent.futures import ThreadPoolExecutor
 
 class UsbDevice:
@@ -16,8 +16,6 @@ class UsbDevice:
     CLICK_LEFT = 0x01
     CLICK_RIGHT = 0x02
     CLICK_BOTH = 0x03
-
-
 
     # Init USB device
     def __init__(self, id_vendor, id_product):
@@ -40,13 +38,13 @@ class UsbDevice:
         self._dit = None
         self._dah = None
 
-        self._observers: List[KeyerObserver] = []
+        self._observers: List[UsbDeviceObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
 
-    def attach_observer(self, observer: KeyerObserver):
+    def attach_observer(self, observer: UsbDeviceObserver):
         self._observers.append(observer)
 
-    def detach_observer(self, observer: KeyerObserver):
+    def detach_observer(self, observer: UsbDeviceObserver):
         self._observers.remove(observer)
 
     def start(self):
