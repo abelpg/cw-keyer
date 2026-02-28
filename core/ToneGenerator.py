@@ -18,6 +18,7 @@ class ToneGenerator:
 
         self._tone_cycle = None
         self._silence_cycle = None
+        self._started = False
 
 
 
@@ -44,14 +45,17 @@ class ToneGenerator:
         return data
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
-        tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
-        for n in range(tone_cycles):
-            self._audio_stream.write(self._tone_cycle)
+        if self._started:
+            tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
+            for n in range(tone_cycles):
+                self._audio_stream.write(self._tone_cycle)
 
-        if silence_duration > 0:
-            silence_cycles = int(self._frequency * silence_duration)
-            for n in range(silence_cycles):
-                self._audio_stream.write(self._silence_cycle)
+            if silence_duration > 0:
+                silence_cycles = int(self._frequency * silence_duration)
+                for n in range(silence_cycles):
+                    self._audio_stream.write(self._silence_cycle)
+        else:
+            print("ToneGenerator is not started. Please call start() method before playing tones.")
 
     def start(self):
         self._audio_stream = self._audio.open(format=pyaudio.paFloat32,
@@ -63,9 +67,10 @@ class ToneGenerator:
 
         self._tone_cycle = self._generate_tone_cycle()
         self._silence_cycle = self._generate_silence_cycle()
-
+        self._started = True
 
     def stop(self):
         self._audio_stream.close()
         self._audio.terminate()
+        self._started = False
 

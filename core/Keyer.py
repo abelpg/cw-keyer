@@ -31,20 +31,26 @@ class Keyer(UsbDeviceObserver):
         self._observers: List[KeyerObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="Keyer observers ThreadPool")
 
+        self._started = False
+
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
     def on_dah(self, pressed: bool):
+        self._check_started()
         if pressed:
             self._dah_pressed = True
             self._set_dah(True)
         else:
             self._dah_pressed = False
 
+
+
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
     """
     def on_dit(self, pressed: bool):
+        self._check_started()
         if pressed:
             self._dit_pressed = True
             self._set_dit(True)
@@ -55,21 +61,25 @@ class Keyer(UsbDeviceObserver):
     Add observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
     """
     def attach_observer(self, observer: KeyerObserver):
-        print("Attaching observer: {}".format(observer))
         self._observers.append(observer)
 
     """
     Remove observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
     """
     def detach_observer(self, observer: KeyerObserver):
-        print("Detach observer: {}".format(observer))
         self._observers.remove(observer)
 
     def start(self):
         self._thread.start()
+        self._started = True
 
     def stop(self):
         self._thread_stop = True
+        self._started = False
+
+    def _check_started(self):
+        if not self._started:
+            print("Keyer is not started. Please call start() method before sending signals.")
 
     """
     So the word PARIS has been chosen to represent the standard word length for measuring the speed of sending CW.    
@@ -121,8 +131,11 @@ class Keyer(UsbDeviceObserver):
         total = self._dit_time + self._space_time
         print("SEND DIT {}s ".format(total))
 
-        for observer in self._observers:
-            self._thread_pool.submit(observer.play_dit, self._dit_time, self._space_time)
+        if len(self._observers) > 0:
+            for observer in self._observers:
+                self._thread_pool.submit(observer.play_dit, self._dit_time, self._space_time)
+        else:
+            print("No observers attached to keyer, skipping dit signal.")
 
         sleep(total)
         self._set_dit(False)
