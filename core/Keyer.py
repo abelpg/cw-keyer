@@ -37,6 +37,7 @@ class Keyer(UsbDeviceObserver):
     def on_dah(self, pressed: bool):
         if pressed:
             self._dah_pressed = True
+            self._set_dah(True)
         else:
             self._dah_pressed = False
 
@@ -46,6 +47,7 @@ class Keyer(UsbDeviceObserver):
     def on_dit(self, pressed: bool):
         if pressed:
             self._dit_pressed = True
+            self._set_dit(True)
         else:
             self._dit_pressed = False
 
