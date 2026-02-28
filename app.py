@@ -140,7 +140,7 @@ class App(QWidget):
 
             self._stop_sound_processor()
 
-            if self._usb_device is not None:
+            if self._usb_device is not None and self._usb_device.is_running():
                 self._usb_device.detach_observer(self._keyer)
             elif self._keyboard_device is not None:
                 self._keyboard_device.detach_observer(self._keyer)
@@ -258,9 +258,6 @@ def main(args=None):
     q_application = QApplication(args)
     app = App()
     app.show()
-    with open("style.qss", "r") as f:
-        _style = f.read()
-        q_application.setStyleSheet(_style)
 
     return q_application.exec()
 
