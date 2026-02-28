@@ -1,142 +1,27 @@
-import threading
-import numpy as np
-from time import time, sleep
+from core.KeyerOberver import KeyerObserver
 from core.ToneGenerator import ToneGenerator
-from core.KeyerObserver import KeyerObserver
-
 
 class SoundKeyer(KeyerObserver):
 
-    # 1WPM dit = 1200 ms mark, 1200 ms space
-    TIME_BASE = 1200
-
     # State machine init. dit dah
-    def __init__(self, wpm : int = 10):
-        # Dit dah variables
-        self._dit = False
-        self._dah = False
-
-        self._dit_pressed = False
-        self._dah_pressed = False
-
+    def __init__(self):
         # Tone
-        self._tone_generator = ToneGenerator(frequency=800, amplitude=0.5)
+        self._tone_generator = ToneGenerator()
 
-        # Principal thread to tak tics from dit and dah
-        self._thread = threading.Thread(target=self._run_iambic, daemon=True)
-        self._thread_stop = False
-
-        # Locks to prevent concurrent modification
-        self._thread_lock_dit = threading.Lock()
-        self._thread_lock_dah = threading.Lock()
-
-        # wmp
-        self._dit_time, self._dah_time, self._space_time = self._calculate(wpm)
-
-    """
-    So the word PARIS has been chosen to represent the standard word length for measuring the speed of sending CW.    
-    The word PARIS comprises a total of 50 units; one unit is the length of one dit. Those 50 units are made up of 22 mark units and 28 space units.
-    Key Timing Formulas
-    Dit Length () = 1200ms / WPM
-    Dah Length () = 3x Dit Length
-    Inter-element Space = 1 Dit Length
-    Letter Space = 3 Dit Lengths
-    Word Space = 7 Dit Lengths
-    Example Speeds
-    15 WPM: Dit = 80ms, Dah = 240ms
-    20 WPM: Dit = 60ms, Dah = 180ms
-    24 WPM: Dit = 50ms, Dah = 150ms
-    30 WPM: Dit = 40ms, Dah = 120ms 
-    """
-    def _calculate(self, wpm:float):
-
-        # Character and word spacing in seconds, rounded to 3 decimals
-        dit_time = self.TIME_BASE / wpm / 1000.0
-        dah_time = dit_time * 3.0
-        space_time = dit_time
+    # Play dit and release dit
+    def play_dit(self,time_dit:float, silence: float):
+        print("Play dit {}s with silence {}s".format(time_dit, silence))
+        self._tone_generator.play_tone(time_dit, silence)
 
 
-        print("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
-        return dit_time, dah_time, space_time
-
-
-    def is_running(self) :
-        return not self._thread_stop
-
-
-    def on_dah(self, pressed: bool):
-        if pressed:
-            self._dah_pressed = True
-            self._set_dah(True)
-        else:
-            self._dah_pressed = False
-
-    def on_dit(self, pressed: bool):
-        if pressed:
-            self._dit_pressed = True
-            self._set_dit(True)
-        else:
-             self._dit_pressed = False
-
+    # Play dah and release dah
+    def play_dah(self , time_dah:float, silence: float):
+        print("Play dah {}s with silence {}s".format(time_dah, silence))
+        self._tone_generator.play_tone(time_dah, silence)
 
     def start(self):
-        # Start listeners
-
-        # Start principal thread
-        self._thread_stop = False
-        self._thread.start()
-
-        ### Start tone generator
         self._tone_generator.start()
-
 
     def stop(self):
         self._tone_generator.stop()
-        self._thread_stop = True
 
-    # Play dit and release dit
-    def play_dit(self):
-        self._tone_generator.play_bg_tone(self._dit_time, self._space_time )
-        total = self._dit_time + self._space_time
-        sleep(total)
-        self._set_dit(False)
-        print("DIT {}s ".format( total))
-
-    # Play dah and release dah
-    def play_dah(self):
-        self._tone_generator.play_bg_tone(self._dah_time ,  self._space_time )
-        total = self._dah_time + self._space_time
-        sleep(total)
-        self._set_dah(False)
-        print("DAH {}s".format(total))
-
-    def _set_dit(self, dit: bool):
-        if self._dit != dit:
-            with self._thread_lock_dit:
-                self._dit = dit
-
-    def _set_dah(self, dah: bool):
-        if self._dah != dah:
-            with self._thread_lock_dah:
-                self._dah = dah
-
-    def _run_iambic(self):
-        while not self._thread_stop:
-            ts = time()
-            # If detects key pressed correct dit/dah values
-            if self._dit_pressed:
-                self._set_dit(True)
-            if self._dah_pressed:
-                self._set_dah(True)
-
-            if self._dit and self._dah:
-                self.play_dit()
-                self.play_dah()
-            elif self._dit:
-                self.play_dit()
-            elif self._dah:
-                self.play_dah()
-            else:
-                # always sleep for the character space time to avoid busy waiting and to give time for the keyer to release the keys
-                sleep(self._dit_time)
-            #print("Bucle {}ms".format(np.ceil((time() - ts) * 1000) / 1000.0))
