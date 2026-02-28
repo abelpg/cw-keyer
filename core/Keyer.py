@@ -3,10 +3,10 @@ from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 
 from typing import List
-from core.KeyerOberver import KeyerObserver
-from core.UsbDeviceObserver import UsbDeviceObserver
+from core.KeyerObserver import KeyerObserver
+from core.DeviceObserver import DeviceObserver
 
-class Keyer(UsbDeviceObserver):
+class Keyer(DeviceObserver):
 
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
@@ -129,7 +129,7 @@ class Keyer(UsbDeviceObserver):
     """
     def _send_dit(self) :
         total = self._dit_time + self._space_time
-        print("SEND DIT {}s ".format(total))
+        #print("SEND DIT {}s ".format(total))
 
         if len(self._observers) > 0:
             for observer in self._observers:
@@ -146,7 +146,7 @@ class Keyer(UsbDeviceObserver):
     """
     def _send_dah(self):
         total = self._dah_time + self._space_time
-        print("SEND DAH {}s".format(total))
+        #print("SEND DAH {}s".format(total))
 
         for observer in self._observers:
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
