@@ -1,9 +1,9 @@
 from time import sleep
 from unittest import case
 
-from core.KeyboardKeyer import KeyboardKeyer
+from core.KeyboardEmulator import KeyboardEmulator
 from core.Keyer import Keyer
-from core.SoundKeyer import SoundKeyer
+from core.SoundProcessor import SoundProcessor
 from core.UsbDevice import UsbDevice
 from os import system
 # Logi 0x046d:0xc52b
@@ -12,37 +12,40 @@ from os import system
 class App:
     def __init__(self):
         self._device = None
-        self._sound_keyer = None
-        self._keyboard_keyer = None
+        #####
+        self._keyboard_emulator = None
         self._keyer = None
+        ####
+        self._sound_processor = None
 
-    def _start_sound_keyer(self):
-        if self._sound_keyer is None:
-            self._sound_keyer = SoundKeyer()
-            self._sound_keyer.start()
-            self._keyer.attach_observer(self._sound_keyer)
+
+    def _start_sound_processor(self):
+        if self._sound_processor is None:
+            self._sound_processor = SoundProcessor()
+            self._sound_processor.start()
+            self._keyer.attach_observer(self._sound_processor)
         else:
             print("Sound keyer is already running.")
 
-    def _stop_sound_keyer(self):
-        if self._sound_keyer is not None:
-            self._sound_keyer.stop()
-            self._keyer.detach_observer(self._sound_keyer)
-            self._sound_keyer = None
+    def _stop_sound_processor(self):
+        if self._sound_processor is not None:
+            self._sound_processor.stop()
+            self._keyer.detach_observer(self._sound_processor)
+            self._sound_processor = None
         else:
             print("Sound keyer is not running, skipping stop.")
 
-    def _start_keyboard_keyer(self):
-        if self._keyboard_keyer is  None:
-            self._keyboard_keyer = KeyboardKeyer()
-            self._keyer.attach_observer(self._keyboard_keyer)
+    def _start_keyboard_emulator(self):
+        if self._keyboard_emulator is  None:
+            self._keyboard_emulator = KeyboardEmulator()
+            self._device.attach_observer(self._keyboard_emulator)
         else:
             print("Keyboard keyer is already running.")
 
-    def _stop_keyboard_keyer(self):
-        if self._sound_keyer is not None:
-            self._keyer.detach_observer(self._keyboard_keyer)
-            self._keyboard_keyer = None
+    def _stop_keyboard_emulator(self):
+        if self._keyboard_emulator is not None:
+            self._device.detach_observer(self._keyboard_emulator)
+            self._keyboard_emulator = None
         else:
             print("Keyboard keyer is not running, skipping stop.")
 
@@ -50,11 +53,13 @@ class App:
         if self._keyer is None:
             self._keyer = Keyer(wpm=20)
             self._keyer.start()
+            self._device.attach_observer(self._keyer)
         else:
             print("Keyer is already running.")
 
     def _stop_keyer(self):
         if self._keyer is not None:
+            self._device.detach_observer(self._keyer)
             self._keyer.stop()
             self._keyer = None
         else:
@@ -75,17 +80,17 @@ class App:
             print("Device is not running, skipping stop.")
 
     def _stop(self):
-        self._stop_device()
+        self._stop_sound_processor()
         self._stop_keyer()
-        self._stop_sound_keyer()
-        self._stop_keyboard_keyer()
+        self._stop_keyboard_emulator()
+        self._stop_device()
 
 
     def _menu(self):
-        print("1. Input keyboard device")
-        print("2. Input USB device: ", "OFF" if self._device is None else "ON" )
-        print("3. Keyboard keyer: ", "OFF" if self._keyboard_keyer is None else "ON" )
-        print("4. Sound keyer: ", "OFF" if self._sound_keyer is None else "ON" )
+        print("1. Input USB device", "OFF" if self._device is None else "ON")
+        print("2. Input Keyboard device: " )
+        print("3. Keyboard emulator: ", "OFF" if self._keyboard_emulator is None else "ON" )
+        print("4. Sound processor: ", "OFF" if self._sound_processor is None else "ON" )
         print("5. Keyer: ", "OFF" if self._keyer is None else "ON")
         print("9. Exit")
         try:
@@ -95,22 +100,23 @@ class App:
 
         match val:
             case 1:
-                self._start_usb_device()
-            case 2:
-                if self._device is not None:
+                if self._device is None:
+                    self._start_usb_device()
+                else:
                     self._stop_device()
-                self._start_usb_device()
+            case 2:
+                print("Not implemented yet.")
 
             case 3:
-                if self._keyboard_keyer is None:
-                    self._start_keyboard_keyer()
+                if self._keyboard_emulator is None:
+                    self._start_keyboard_emulator()
                 else:
-                    self._stop_keyboard_keyer()
+                    self._stop_keyboard_emulator()
             case 4:
-                if self._sound_keyer is None:
-                    self._start_sound_keyer()
+                if self._sound_processor is None:
+                    self._start_sound_processor()
                 else:
-                    self._stop_sound_keyer()
+                    self._stop_sound_processor()
             case 5:
                 if self._keyer is None:
                     self._start_keyer()
@@ -122,8 +128,7 @@ class App:
 
     def run(self):
         self._start_usb_device()
-        self._start_keyer()
-        self._start_keyboard_keyer()
+        self._start_keyboard_emulator()
         while True:
             self._menu()
 

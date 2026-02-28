@@ -1,7 +1,7 @@
 from core.KeyerObserver import KeyerObserver
 from core.ToneGenerator import ToneGenerator
 
-class SoundKeyer(KeyerObserver):
+class SoundProcessor(KeyerObserver):
 
     # State machine init. dit dah
     def __init__(self):

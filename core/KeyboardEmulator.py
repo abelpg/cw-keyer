@@ -5,7 +5,7 @@ from core.DeviceObserver import DeviceObserver
 This class is responsible for listening to the keyboard events and sending the corresponding events to the keyer. 
 It implements the UsbDeviceObserver interface to receive notifications when the dit or dah is pressed or released.
 """
-class KeyboardKeyer(DeviceObserver):
+class KeyboardEmulator(DeviceObserver):
 
     def __init__(self):
         # KB listener
