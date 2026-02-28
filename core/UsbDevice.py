@@ -1,15 +1,12 @@
 import threading
-from time import time
-
 import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
 #os.environ['PYUSB_DEBUG'] = 'debug'
-from typing import List
-from core.UsbDeviceObserver import UsbDeviceObserver
-from concurrent.futures import ThreadPoolExecutor
+from core.Device import Device
 
-class UsbDevice:
+
+class UsbDevice(Device):
 
     BYTE_SIZE = 4
     INPUT_ADDR = 0x82
@@ -19,6 +16,7 @@ class UsbDevice:
 
     # Init USB device
     def __init__(self, id_vendor, id_product):
+        super().__init__()
         self._id_vendor = id_vendor
         self._id_product = id_product
 
@@ -35,17 +33,6 @@ class UsbDevice:
 
         self._stop = False
         self._thread = threading.Thread(target=self._run_usb_device_collect, daemon=True)
-        self._dit = None
-        self._dah = None
-
-        self._observers: List[UsbDeviceObserver] = []
-        self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
-
-    def attach_observer(self, observer: UsbDeviceObserver):
-        self._observers.append(observer)
-
-    def detach_observer(self, observer: UsbDeviceObserver):
-        self._observers.remove(observer)
 
     def start(self):
         self._thread.start()
@@ -65,16 +52,6 @@ class UsbDevice:
                         return interface, endpoint
         return None, None
 
-    def _set_dit(self, dit):
-        self._dit = dit
-        for observer in self._observers:
-            self._thread_pool.submit(observer.on_dit,dit)
-
-
-    def _set_dah(self, dah):
-        self._dah = dah
-        for observer in self._observers:
-            self._thread_pool.submit(observer.on_dah,dah)
 
     """
     Set dit and dah values and control the state of the keyer. This is used to avoid concurrent modification of dit and 

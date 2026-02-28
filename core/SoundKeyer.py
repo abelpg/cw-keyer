@@ -1,4 +1,4 @@
-from core.KeyerOberver import KeyerObserver
+from core.KeyerObserver import KeyerObserver
 from core.ToneGenerator import ToneGenerator
 
 class SoundKeyer(KeyerObserver):

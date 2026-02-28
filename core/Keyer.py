@@ -3,10 +3,10 @@ from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 
 from typing import List
-from core.KeyerOberver import KeyerObserver
-from core.UsbDeviceObserver import UsbDeviceObserver
+from core.KeyerObserver import KeyerObserver
+from core.DeviceObserver import DeviceObserver
 
-class Keyer(UsbDeviceObserver):
+class Keyer(DeviceObserver):
 
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
