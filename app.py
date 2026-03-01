@@ -1,6 +1,6 @@
 import sys
 
-from core.emulator import CommEmulator,KeyboardEmulator
+from core.emulator import CommEmulatorWithKeyer, KeyboardEmulator, CommEmulator
 from core.keyer import Keyer
 from core.sound import SoundProcessor
 from core.device import UsbDevice, KeyboardDevice
@@ -41,6 +41,7 @@ class App(QWidget):
 
         self._keyboard_device = None
         #####
+        self._comm_emulator_with_keyer = None
         self._comm_emulator = None
         self._keyboard_emulator = None
         self._keyer = None
@@ -66,13 +67,17 @@ class App(QWidget):
         self._button_keyer.clicked.connect(self._click_keyer)
         self._layout.addWidget(self._button_keyer)
 
+        self._button_comm_emulator = QtWidgets.QPushButton("Comm emulator")
+        self._button_comm_emulator.clicked.connect(self._click_comm_emulator)
+        self._layout.addWidget(self._button_comm_emulator)
+
         self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
         self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
         self._layout.addWidget(self._button_keyboard_emulator)
 
-        self._button_comm_emulator = QtWidgets.QPushButton("Comm emulator")
-        self._button_comm_emulator.clicked.connect(self._click_comm_emulator)
-        self._layout.addWidget(self._button_comm_emulator)
+        self._button_comm_emulator_with_keyer = QtWidgets.QPushButton("Comm emulator with keyer")
+        self._button_comm_emulator_with_keyer.clicked.connect(self._click_comm_emulator_with_keyer)
+        self._layout.addWidget(self._button_comm_emulator_with_keyer)
 
         self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
         self._button_sound_processor.clicked.connect(self._click_sound_processor)
@@ -101,27 +106,26 @@ class App(QWidget):
         else:
             print("Sound keyer is not running, skipping stop.")
 
-    def _start_comm_emulator(self):
-        if self._comm_emulator is None:
-            self._comm_emulator = CommEmulator()
-            if self._usb_device is not None and self._usb_device.is_running():
-                self._usb_device.attach_observer(self._comm_emulator)
-            elif self._keyboard_device is not None:
-                self._keyboard_device.attach_observer(self._comm_emulator)
+    def _start_comm_emulator_with_keyer(self):
+        if self._comm_emulator_with_keyer is None:
+            self._comm_emulator_with_keyer = CommEmulatorWithKeyer()
+            self._comm_emulator_with_keyer.start()
+            self._keyer.attach_observer(self._comm_emulator_with_keyer)
 
-            self._button_comm_emulator.setStyleSheet("background-color: green; ")
+            self._button_comm_emulator_with_keyer.setStyleSheet("background-color: green; ")
             print("Comm emulator started.")
         else:
             print("Comm emulator is already running.")
 
-    def _stop_comm_emulator(self):
-        if self._comm_emulator is not None:
-            if self._usb_device is not None and self._usb_device.is_running():
-                self._usb_device.detach_observer(self._comm_emulator)
-            elif self._keyboard_device is not None:
-                self._keyboard_device.detach_observer(self._comm_emulator)
-            self._comm_emulator = None
-            self._button_comm_emulator.setStyleSheet("background-color: red; ")
+    def _stop_comm_emulator_with_keyer(self):
+        if self._comm_emulator_with_keyer is not None:
+
+            if self._keyer is not None:
+                self._keyer.detach_observer(self._comm_emulator_with_keyer)
+
+            self._comm_emulator_with_keyer.stop()
+            self._comm_emulator_with_keyer = None
+            self._button_comm_emulator_with_keyer.setStyleSheet("background-color: red; ")
             print("Comm emulator stopped.")
         else:
             print("Comm emulator is not running, skipping stop.")
@@ -149,13 +153,42 @@ class App(QWidget):
         else:
             print("Keyboard keyer is not running, skipping stop.")
 
+    def _start_comm_emulator(self):
+        # Protect concurrent loop
+        if self._comm_emulator is  None:
+            self._comm_emulator = CommEmulator()
+            if self._is_usb_device():
+                self._usb_device.attach_observer(self._comm_emulator)
+            elif self._is_keyboard_device():
+                self._keyboard_device.attach_observer(self._comm_emulator)
+
+            self._comm_emulator.start()
+
+            self._button_comm_emulator.setStyleSheet("background-color: green; ")
+            print("Comm emulator started.")
+        else:
+            print("Comm emulator is already running.")
+
+    def _stop_comm_emulator(self):
+        if self._comm_emulator is not None:
+            if self._is_usb_device():
+                self._usb_device.detach_observer(self._comm_emulator)
+            elif self._is_keyboard_device():
+                self._keyboard_device.detach_observer(self._comm_emulator)
+            self._comm_emulator.stop()
+            self._comm_emulator = None
+            self._button_comm_emulator.setStyleSheet("background-color: red; ")
+            print("Comm emulator stopped.")
+        else:
+            print("Comm emulator is not running, skipping stop.")
+
     def _start_keyer(self):
         if self._keyer is None:
             self._keyer = Keyer(wpm=20)
             self._keyer.start()
-            if self._usb_device is not None and self._usb_device.is_running():
+            if self._is_usb_device():
                 self._usb_device.attach_observer(self._keyer)
-            elif self._keyboard_device is not None:
+            elif self._is_keyboard_device():
                 self._keyboard_device.attach_observer(self._keyer)
             self._start_sound_processor()
 
@@ -169,9 +202,9 @@ class App(QWidget):
 
             self._stop_sound_processor()
 
-            if self._usb_device is not None and self._usb_device.is_running():
+            if self._is_usb_device():
                 self._usb_device.detach_observer(self._keyer)
-            elif self._keyboard_device is not None:
+            elif self._is_keyboard_device():
                 self._keyboard_device.detach_observer(self._keyer)
             self._keyer.stop()
             self._keyer = None
@@ -217,11 +250,18 @@ class App(QWidget):
         else:
             print("Keyboard device is not running, skipping stop.")
 
+    def _is_keyboard_device(self):
+        return self._keyboard_device is not None
+
+    def _is_usb_device(self):
+        return self._usb_device is not None and self._usb_device.is_running()
 
     def _stop(self):
 
         self._stop_keyer()
         self._stop_keyboard_emulator()
+        self._stop_comm_emulator()
+        self._stop_comm_emulator_with_keyer()
         self._stop_keyboard_device()
         self._stop_usb_device()
 
@@ -257,6 +297,12 @@ class App(QWidget):
             self._start_sound_processor()
         else:
             self._stop_sound_processor()
+
+    def _click_comm_emulator_with_keyer(self):
+        if self._comm_emulator_with_keyer is None:
+            self._start_comm_emulator_with_keyer()
+        else:
+            self._stop_comm_emulator_with_keyer()
 
     def _click_comm_emulator(self):
         if self._comm_emulator is None:

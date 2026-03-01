@@ -1,15 +1,15 @@
 import serial
 from time import sleep
+from core.keyer import KeyerObserver
 
-from core.device import DeviceObserver
 
-
-class CommEmulator(DeviceObserver):
+class CommEmulatorWithKeyer(KeyerObserver):
 
     def __init__(self):
         super().__init__()
 
         self._serial = None
+
 
     def start(self):
         if self._serial is None:
@@ -17,7 +17,7 @@ class CommEmulator(DeviceObserver):
             self._serial.baudrate = 19200
             self._serial.port = 'COM4'
 
-            #self._serial.rtscts = True
+            self._serial.rtscts = True
             self._serial.dtr = False
             self._serial.rts = False
 
@@ -33,18 +33,25 @@ class CommEmulator(DeviceObserver):
         if self._serial is not None:
             self._serial.close()
             self._serial = None
+    """
+    Proxy method to translate the dit and dah events to keyboard events.
+    """
+    def play_dah(self,time_dah:float, silence: float):
+        print("on dah")
+        self._serial.dtr = True
+        sleep(time_dah)
+        self._serial.dtr = False
+
+        sleep(silence)
 
     """
     Proxy method to translate the dit and dah events to keyboard events.
     """
-    def on_dah(self, pressed: bool):
-        print("DAH: " + str(pressed))
-        self._serial.rts = pressed
+    def play_dit(self, time_dit: float, silence: float):
+        print("on dit")
+        self._serial.dtr = True
+        sleep(time_dit)
+        self._serial.dtr = False
 
+        sleep(silence)
 
-    """
-    Proxy method to translate the dit and dah events to keyboard events.
-    """
-    def on_dit(self, pressed: bool):
-        print("DIT: " + str(pressed))
-        self._serial.dtr = pressed
