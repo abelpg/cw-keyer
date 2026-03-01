@@ -1,4 +1,4 @@
-from core.Device import Device
+from core.device import Device
 from pynput.keyboard import Key, Listener
 
 class KeyboardDevice(Device):

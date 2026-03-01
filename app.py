@@ -1,11 +1,9 @@
 import sys
 
-from core.CommEmulator import CommEmulator
-from core.KeyboardDevice import KeyboardDevice
-from core.KeyboardEmulator import KeyboardEmulator
-from core.Keyer import Keyer
-from core.SoundProcessor import SoundProcessor
-from core.UsbDevice import UsbDevice
+from core.emulator import CommEmulator,KeyboardEmulator
+from core.keyer import Keyer
+from core.sound import SoundProcessor
+from core.device import UsbDevice, KeyboardDevice
 
 # Logi 0x046d:0xc52b
 # Key 0x413d:0x2107

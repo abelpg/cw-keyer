@@ -1,4 +1,4 @@
-from core.DeviceObserver import DeviceObserver
+from core.device import DeviceObserver
 
 
 class CommEmulator(DeviceObserver):

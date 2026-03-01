@@ -1,12 +1,12 @@
-from core.KeyerObserver import KeyerObserver
-from core.ToneGenerator import ToneGenerator
+from core.keyer import KeyerObserver
+from core.sound import ToneGenerator
 
 class SoundProcessor(KeyerObserver):
 
     # State machine init. dit dah
     def __init__(self):
         # Tone
-        self._tone_generator = ToneGenerator()
+        self._tone_generator = None
         self._started = False
 
     # Play dit and release dit
@@ -24,6 +24,7 @@ class SoundProcessor(KeyerObserver):
             print("SoundKeyer is not started. Please call start() method before playing tones.")
 
     def start(self):
+        self._tone_generator = ToneGenerator()
         self._tone_generator.start()
         self._started = True
 

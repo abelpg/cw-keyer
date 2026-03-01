@@ -1,5 +1,5 @@
-from pynput.keyboard import Key, Controller, Listener
-from core.DeviceObserver import DeviceObserver
+from pynput.keyboard import Key, Controller
+from core.device import DeviceObserver
 
 """
 This class is responsible for listening to the keyboard events and sending the corresponding events to the keyer. 

@@ -1,6 +1,6 @@
 from typing import List
 from concurrent.futures import ThreadPoolExecutor
-from core.DeviceObserver import DeviceObserver
+from core.device import DeviceObserver
 from abc import ABC, abstractmethod
 
 class Device(ABC):

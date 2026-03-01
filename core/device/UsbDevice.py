@@ -3,7 +3,7 @@ import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
 #os.environ['PYUSB_DEBUG'] = 'debug'
-from core.Device import Device
+from core.device import Device
 
 
 class UsbDevice(Device):

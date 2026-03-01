@@ -3,8 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 from time import sleep
 
 from typing import List
-from core.KeyerObserver import KeyerObserver
-from core.DeviceObserver import DeviceObserver
+from core.keyer import KeyerObserver
+from core.device import DeviceObserver
 
 class Keyer(DeviceObserver):
 
