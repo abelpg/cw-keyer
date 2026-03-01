@@ -8,7 +8,7 @@ It implements the UsbDeviceObserver interface to receive notifications when the 
 class KeyboardEmulator(DeviceObserver):
 
     def __init__(self):
-        # KB listener
+        super().__init__()
         self._controller = Controller()
 
     """

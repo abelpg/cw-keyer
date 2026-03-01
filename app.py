@@ -1,5 +1,6 @@
 import sys
 
+from core.CommEmulator import CommEmulator
 from core.KeyboardDevice import KeyboardDevice
 from core.KeyboardEmulator import KeyboardEmulator
 from core.Keyer import Keyer
@@ -42,6 +43,7 @@ class App(QWidget):
 
         self._keyboard_device = None
         #####
+        self._comm_emulator = None
         self._keyboard_emulator = None
         self._keyer = None
         ####
@@ -70,6 +72,10 @@ class App(QWidget):
         self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
         self._layout.addWidget(self._button_keyboard_emulator)
 
+        self._button_comm_emulator = QtWidgets.QPushButton("Comm emulator")
+        self._button_comm_emulator.clicked.connect(self._click_comm_emulator)
+        self._layout.addWidget(self._button_comm_emulator)
+
         self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
         self._button_sound_processor.clicked.connect(self._click_sound_processor)
         self._layout.addWidget(self._button_sound_processor)
@@ -96,6 +102,31 @@ class App(QWidget):
             print("Sound processor stopped.")
         else:
             print("Sound keyer is not running, skipping stop.")
+
+    def _start_comm_emulator(self):
+        if self._comm_emulator is None:
+            self._comm_emulator = CommEmulator()
+            if self._usb_device is not None and self._usb_device.is_running():
+                self._usb_device.attach_observer(self._comm_emulator)
+            elif self._keyboard_device is not None:
+                self._keyboard_device.attach_observer(self._comm_emulator)
+
+            self._button_comm_emulator.setStyleSheet("background-color: green; ")
+            print("Comm emulator started.")
+        else:
+            print("Comm emulator is already running.")
+
+    def _stop_comm_emulator(self):
+        if self._comm_emulator is not None:
+            if self._usb_device is not None and self._usb_device.is_running():
+                self._usb_device.detach_observer(self._comm_emulator)
+            elif self._keyboard_device is not None:
+                self._keyboard_device.detach_observer(self._comm_emulator)
+            self._comm_emulator = None
+            self._button_comm_emulator.setStyleSheet("background-color: red; ")
+            print("Comm emulator stopped.")
+        else:
+            print("Comm emulator is not running, skipping stop.")
 
     def _start_keyboard_emulator(self):
         # Protect concurrent loop
@@ -229,6 +260,11 @@ class App(QWidget):
         else:
             self._stop_sound_processor()
 
+    def _click_comm_emulator(self):
+        if self._comm_emulator is None:
+            self._start_comm_emulator()
+        else:
+            self._stop_comm_emulator()
 
     def show(self):
         super().show()
