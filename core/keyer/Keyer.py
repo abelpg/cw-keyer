@@ -6,7 +6,7 @@ from typing import List
 from core.keyer import KeyerObserver
 from core.device import DeviceObserver
 
-LOG = False
+#LOG = True
 
 def _log(message: str):
     if LOG:
@@ -35,7 +35,7 @@ class Keyer(DeviceObserver):
         self._thread_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
-        self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="Keyer observers ThreadPool")
+        self._thread_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="Keyer observers ThreadPool")
 
         self._started = False
 
@@ -116,7 +116,7 @@ class Keyer(DeviceObserver):
     """
     def _send_dit(self) :
         ts = time()
-        total = self._dit_time + self._space_time
+
 
         if len(self._observers) > 0:
             for observer in self._observers:
@@ -124,10 +124,10 @@ class Keyer(DeviceObserver):
         else:
             print("No observers attached to keyer, skipping dit signal.")
 
-        sleep(total)
+        sleep(self._dit_time)
         with self._thread_lock:
             self._dit = False
-        _log("SEND DIT {}s {}s".format(total, time() - ts))
+        _log("SEND DIT {}s {}s".format(self._dit_time, time() - ts))
 
 
     """
@@ -135,14 +135,13 @@ class Keyer(DeviceObserver):
     """
     def _send_dah(self):
         ts = time()
-        total = self._dah_time + self._space_time
         for observer in self._observers:
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
 
-        sleep(total)
+        sleep(self._dah_time)
         with self._thread_lock:
             self._dah = False
-        _log("SEND DAH {}s {}s".format(total, time() - ts))
+        _log("SEND DAH {}s {}s".format(self._dah_time, time() - ts))
 
 
     """
@@ -151,16 +150,14 @@ class Keyer(DeviceObserver):
     """
     def _run_iambic(self):
         while not self._thread_stop:
-
+            sleep(self._space_time)
             _log("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
 
             if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed):
                 self._send_dit()
+                sleep(self._space_time)
                 self._send_dah()
             elif self._dit or self._dit_pressed:
                 self._send_dit()
             elif self._dah or self._dah_pressed:
                 self._send_dah()
-            else:
-                # Default sleep to prevent high CPU usage when no key is pressed, this is not a problem because the
-                sleep(self._space_time)
