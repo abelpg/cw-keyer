@@ -6,7 +6,7 @@ from typing import List
 from core.keyer import KeyerObserver
 from core.device import DeviceObserver
 
-#LOG = True
+LOG = False
 
 def _log(message: str):
     if LOG:
