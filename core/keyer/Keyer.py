@@ -1,10 +1,17 @@
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from time import sleep
+from time import sleep, time
 
 from typing import List
 from core.keyer import KeyerObserver
 from core.device import DeviceObserver
+
+LOG = False
+
+def _log(message: str):
+    if LOG:
+        print("{} {}".format(time(), message))
+
 
 class Keyer(DeviceObserver):
 
@@ -25,8 +32,7 @@ class Keyer(DeviceObserver):
         self._thread_stop = False
 
         # Locks to prevent concurrent modification
-        self._thread_lock_dit = threading.Lock()
-        self._thread_lock_dah = threading.Lock()
+        self._thread_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="Keyer observers ThreadPool")
@@ -39,12 +45,9 @@ class Keyer(DeviceObserver):
     def on_dah(self, pressed: bool):
         self._check_started()
         if pressed:
-            self._dah_pressed = True
-            self._set_dah(True)
+            self._dah_pressed, self._dah =  True, True
         else:
             self._dah_pressed = False
-
-
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
@@ -52,8 +55,7 @@ class Keyer(DeviceObserver):
     def on_dit(self, pressed: bool):
         self._check_started()
         if pressed:
-            self._dit_pressed = True
-            self._set_dit(True)
+            self._dit_pressed, self._dit = True, True
         else:
             self._dit_pressed = False
 
@@ -106,30 +108,15 @@ class Keyer(DeviceObserver):
         print("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
         return dit_time, dah_time, space_time
 
-    """
-    Set dit and dah values and control the state of the keyer. This is used to avoid concurrent modification of dit
-    """
-    def _set_dit(self, dit: bool):
-        if self._dit != dit:
-            with self._thread_lock_dit:
-                self._dit = dit
 
-    """
-    Set dah values and control the state of the keyer. This is used to avoid concurrent modification of dah
-    """
-    def _set_dah(self, dah: bool):
-        if self._dah != dah:
-            with self._thread_lock_dah:
-                self._dah = dah
 
-        # Play dit and release dit
 
     """
     Loop observes notify and wait dit time with space, finally release dit.
     """
     def _send_dit(self) :
+        ts = time()
         total = self._dit_time + self._space_time
-        #print("SEND DIT {}s ".format(total))
 
         if len(self._observers) > 0:
             for observer in self._observers:
@@ -138,21 +125,24 @@ class Keyer(DeviceObserver):
             print("No observers attached to keyer, skipping dit signal.")
 
         sleep(total)
-        self._set_dit(False)
+        with self._thread_lock:
+            self._dit = False
+        _log("SEND DIT {}s {}s".format(total, time() - ts))
 
 
     """
     Loop observes notify and wait dah time with space. Finally, release dah
     """
     def _send_dah(self):
+        ts = time()
         total = self._dah_time + self._space_time
-        #print("SEND DAH {}s".format(total))
-
         for observer in self._observers:
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
 
         sleep(total)
-        self._set_dah(False)
+        with self._thread_lock:
+            self._dah = False
+        _log("SEND DAH {}s {}s".format(total, time() - ts))
 
 
     """
@@ -162,18 +152,15 @@ class Keyer(DeviceObserver):
     def _run_iambic(self):
         while not self._thread_stop:
 
-            if self._dit_pressed:
-                self._set_dit(True)
-            if self._dah_pressed:
-                self._set_dah(True)
+            _log("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
 
-            if self._dit and self._dah:
+            if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed):
                 self._send_dit()
                 self._send_dah()
-            elif self._dit:
+            elif self._dit or self._dit_pressed:
                 self._send_dit()
-            elif self._dah:
+            elif self._dah or self._dah_pressed:
                 self._send_dah()
             else:
                 # Default sleep to prevent high CPU usage when no key is pressed, this is not a problem because the
-                sleep(0.1)
+                sleep(self._space_time)
