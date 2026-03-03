@@ -14,13 +14,18 @@ class KeyboardDevice(Device):
         self._kb_listener.stop()
 
     def _on_press_key(self, key):
+
         if key == Key.ctrl_r:
+            print("Ctrl R press")
             self._set_dah(True)
         elif key == Key.ctrl_l:
+            print("Ctrl L press")
             self._set_dit(True)
 
     def _on_release_key(self, key):
         if key == Key.ctrl_r:
+            print("Ctrl R release")
             self._set_dah(False)
         elif key == Key.ctrl_l:
+            print("Ctrl L release")
             self._set_dit(False)

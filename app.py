@@ -67,9 +67,24 @@ class App(QWidget):
         self._button_keyer.clicked.connect(self._click_keyer)
         self._layout.addWidget(self._button_keyer)
 
+        self._layout_comm_emulator = QtWidgets.QHBoxLayout()
+        self._layout_comm_emulator_widget = QtWidgets.QWidget()
+        self._layout_comm_emulator_widget.setMaximumHeight(45)
+
+        self._layout_comm_emulator_widget.setLayout(self._layout_comm_emulator)
+
         self._button_comm_emulator = QtWidgets.QPushButton("Comm emulator")
         self._button_comm_emulator.clicked.connect(self._click_comm_emulator)
-        self._layout.addWidget(self._button_comm_emulator)
+
+        self._comm_emulator_port =   QtWidgets.QTextEdit()
+        self._comm_emulator_port.setText("COM4")
+        self._comm_emulator_port.setMaximumHeight(25)
+        self._comm_emulator_port.setMaximumWidth(100)
+
+        self._layout_comm_emulator.addWidget(self._button_comm_emulator)
+        self._layout_comm_emulator.addWidget(self._comm_emulator_port)
+
+        self._layout.addWidget(self._layout_comm_emulator_widget)
 
         self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
         self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)

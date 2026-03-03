@@ -14,10 +14,10 @@ class CommEmulator(DeviceObserver):
     def start(self):
         if self._serial is None:
             self._serial = serial.Serial()
-            self._serial.baudrate = 19200
+            self._serial.baudrate = 9600
             self._serial.port = 'COM4'
 
-            #self._serial.rtscts = True
+            self._serial.rtscts = False
             self._serial.dtr = False
             self._serial.rts = False
 
