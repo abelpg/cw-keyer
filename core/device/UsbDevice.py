@@ -1,3 +1,4 @@
+import logging
 import threading
 import usb.util
 import usb.backend.libusb1 as libusb1
@@ -17,6 +18,9 @@ class UsbDevice(Device):
     # Init USB device
     def __init__(self, id_vendor, id_product):
         super().__init__()
+
+        self._logger = logging.getLogger(__name__)
+
         self._id_vendor = id_vendor
         self._id_product = id_product
 
@@ -24,11 +28,13 @@ class UsbDevice(Device):
         self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=be)
 
         if self._device is None:
+            self._logger.error("Could not find USB device.")
             raise ValueError('Device not found ' + id_vendor + '/' + id_product)
 
         self._interface, self._endpoint = self._find_interface_endpoint()
 
         if self._interface is None or self._endpoint is None:
+            self._logger.error("No interface or endpoint found for USB device.")
             raise ValueError('No interface or endpoint found')
 
         self._stop = True
@@ -82,7 +88,7 @@ class UsbDevice(Device):
     accordingly.
     """
     def _run_usb_device_collect(self):
-        print("Starting USB device collect thread.")
+        self._logger.info("Starting USB device collect thread.")
         # Claim interface
         usb.util.claim_interface(self._device, self._interface)
 
@@ -106,4 +112,4 @@ class UsbDevice(Device):
 
         # Release interface
         usb.util.release_interface(self._device, self._interface)
-        print("Stopped USB device collect thread.")
+        self._logger.info("Stopped USB device collect thread.")

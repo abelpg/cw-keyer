@@ -1,3 +1,5 @@
+import logging
+
 import serial
 from time import sleep
 from core.keyer import KeyerObserver
@@ -7,6 +9,8 @@ class CommEmulatorWithKeyer(KeyerObserver):
 
     def __init__(self):
         super().__init__()
+
+        self._logger = logging.getLogger(__name__)
 
         self._serial = None
 
@@ -27,7 +31,7 @@ class CommEmulatorWithKeyer(KeyerObserver):
 
             self._serial.open()
         else:
-            print("Serial port is already open. Please call stop() method before starting again.")
+            self._logger.warning("Serial port is already open. Please call stop() method before starting again.")
 
     def stop(self):
         if self._serial is not None:
@@ -37,7 +41,7 @@ class CommEmulatorWithKeyer(KeyerObserver):
     Proxy method to translate the dit and dah events to keyboard events.
     """
     def play_dah(self,time_dah:float, silence: float):
-        print("on dah")
+        self._logger.debug("on dah")
         self._serial.dtr = True
         sleep(time_dah)
         self._serial.dtr = False
@@ -48,7 +52,7 @@ class CommEmulatorWithKeyer(KeyerObserver):
     Proxy method to translate the dit and dah events to keyboard events.
     """
     def play_dit(self, time_dit: float, silence: float):
-        print("on dit")
+        self._logger.debug("on dit")
         self._serial.dtr = True
         sleep(time_dit)
         self._serial.dtr = False

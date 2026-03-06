@@ -1,3 +1,4 @@
+import logging
 import struct
 import pyaudio
 import numpy as np
@@ -5,6 +6,7 @@ import numpy as np
 class ToneGenerator:
 
     def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 600, amplitude: float = 0.5):
+        self._logger = logging.getLogger(__name__)
         # Init audio
         self._audio = pyaudio.PyAudio()
 
@@ -56,7 +58,7 @@ class ToneGenerator:
                 for n in range(silence_cycles):
                     self._audio_stream.write(self._silence_cycle)
         else:
-            print("ToneGenerator is not started. Please call start() method before playing tones.")
+            self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
     def start(self):
         self._audio_stream = self._audio.open(format=pyaudio.paFloat32,

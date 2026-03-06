@@ -1,3 +1,6 @@
+import logging
+from logging import Logger
+
 import serial
 from time import sleep
 
@@ -8,6 +11,8 @@ class CommEmulator(DeviceObserver):
 
     def __init__(self):
         super().__init__()
+
+        self._logger = logging.getLogger(__name__)
 
         self._serial = None
 
@@ -27,7 +32,7 @@ class CommEmulator(DeviceObserver):
 
             self._serial.open()
         else:
-            print("Serial port is already open. Please call stop() method before starting again.")
+            self._logger.warning("Serial port is already open. Please call stop() method before starting again.")
 
     def stop(self):
         if self._serial is not None:
@@ -38,7 +43,7 @@ class CommEmulator(DeviceObserver):
     Proxy method to translate the dit and dah events to keyboard events.
     """
     def on_dah(self, pressed: bool):
-        print("DAH: " + str(pressed))
+        self._logger.debug("DAH: " + str(pressed))
         self._serial.rts = pressed
 
 
@@ -46,5 +51,5 @@ class CommEmulator(DeviceObserver):
     Proxy method to translate the dit and dah events to keyboard events.
     """
     def on_dit(self, pressed: bool):
-        print("DIT: " + str(pressed))
+        self._logger.debug("DIT: " + str(pressed))
         self._serial.dtr = pressed

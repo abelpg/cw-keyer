@@ -1,3 +1,5 @@
+import logging
+
 from core.keyer import KeyerObserver
 from core.sound import ToneGenerator
 
@@ -5,6 +7,7 @@ class SoundProcessor(KeyerObserver):
 
     # State machine init. dit dah
     def __init__(self):
+        self._logger = logging.getLogger(__name__)
         # Tone
         self._tone_generator = None
         self._started = False
@@ -21,7 +24,7 @@ class SoundProcessor(KeyerObserver):
         if self._started:
             self._tone_generator.play_tone(time_to_play, silence)
         else:
-            print("SoundKeyer is not started. Please call start() method before playing tones.")
+            self._logger.warning("SoundKeyer is not started. Please call start() method before playing tones.")
 
     def start(self):
         self._tone_generator = ToneGenerator()

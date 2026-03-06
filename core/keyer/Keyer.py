@@ -1,3 +1,4 @@
+import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep, time
@@ -6,12 +7,6 @@ from typing import List
 from core.keyer import KeyerObserver
 from core.device import DeviceObserver
 
-LOG = False
-
-def _log(message: str):
-    if LOG:
-        print("{} {}".format(time(), message))
-
 
 class Keyer(DeviceObserver):
 
@@ -19,6 +14,9 @@ class Keyer(DeviceObserver):
     TIME_BASE = 1200
 
     def __init__(self, wpm : int):
+        self._logger = logging.getLogger(__name__)
+
+        # State machine init. dit dah
         self._dit_pressed = False
         self._dah_pressed = False
         self._dit = False
@@ -81,7 +79,7 @@ class Keyer(DeviceObserver):
 
     def _check_started(self):
         if not self._started:
-            print("Keyer is not started. Please call start() method before sending signals.")
+            self._logger.warning("Keyer is not started. Please call start() method before sending signals.")
 
     """
     So the word PARIS has been chosen to represent the standard word length for measuring the speed of sending CW.    
@@ -105,7 +103,7 @@ class Keyer(DeviceObserver):
         dah_time = dit_time * 3.0
         space_time = dit_time
 
-        print("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
+        self._logger.info("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
         return dit_time, dah_time, space_time
 
 
@@ -122,12 +120,12 @@ class Keyer(DeviceObserver):
             for observer in self._observers:
                 self._thread_pool.submit(observer.play_dit, self._dit_time, self._space_time)
         else:
-            print("No observers attached to keyer, skipping dit signal.")
+            self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
         sleep(self._dit_time)
         with self._thread_lock:
             self._dit = False
-        _log("SEND DIT {}s {}s".format(self._dit_time, time() - ts))
+        self._logger.debug("SEND DIT {}s {}s".format(self._dit_time, time() - ts))
 
 
     """
@@ -141,7 +139,7 @@ class Keyer(DeviceObserver):
         sleep(self._dah_time)
         with self._thread_lock:
             self._dah = False
-        _log("SEND DAH {}s {}s".format(self._dah_time, time() - ts))
+        self._logger.debug("SEND DAH {}s {}s".format(self._dah_time, time() - ts))
 
 
     """
@@ -151,7 +149,7 @@ class Keyer(DeviceObserver):
     def _run_iambic(self):
         while not self._thread_stop:
             sleep(self._space_time)
-            _log("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
+            #self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
 
             if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed):
                 self._send_dit()
