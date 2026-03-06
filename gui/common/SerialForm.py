@@ -2,7 +2,6 @@ import logging
 
 from PySide6 import QtWidgets
 from core.config import Configuration
-from core.emulator import CommEmulator
 from core.emulator.CommSerial import CommSerial
 
 class SerialForm:
@@ -19,7 +18,6 @@ class SerialForm:
 
         layout = QtWidgets.QHBoxLayout()
         widget = QtWidgets.QWidget()
-        widget.setMaximumHeight(45)
 
         widget.setLayout(layout)
 

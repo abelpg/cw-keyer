@@ -1,8 +1,6 @@
 import logging
 
-import serial
 from time import sleep
-
 from core.emulator.CommSerial import CommSerial
 from core.keyer import KeyerObserver
 

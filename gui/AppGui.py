@@ -1,13 +1,9 @@
 import logging
-import sys
 
-from core.emulator import CommEmulatorWithKeyer, KeyboardEmulator, CommEmulator
-from core.keyer import Keyer
-from core.sound import SoundProcessor
-from core.device import UsbDevice, KeyboardDevice
+from core.emulator import KeyboardEmulator
 from gui.CommEmulatorNoKeyerForm import CommEmulatorNoKeyerForm
 from gui.DevicesForm import DevicesForm
-from gui.KeyerForm import KeyerForm
+from gui.keyer.KeyerForm import KeyerForm
 
 # Logi 0x046d:0xc52b
 # Key 0x413d:0x2107
@@ -58,7 +54,6 @@ class AppGui(QWidget):
 
 
     def _stop(self):
-
         self._keyer_form.stop()
         self._stop_keyboard_emulator()
         self._comm_emulator_form.stop()

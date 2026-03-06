@@ -2,9 +2,10 @@ import logging
 
 from PySide6 import QtWidgets
 
-from core.emulator import CommEmulatorWithKeyer, KeyboardEmulator
+from core.emulator import CommEmulatorWithKeyer
 from core.keyer import Keyer
 from core.sound import SoundProcessor
+from gui.keyer.CommEmulatorKeyerForm import CommEmulatorKeyerForm
 
 
 class KeyerForm:
@@ -29,9 +30,9 @@ class KeyerForm:
         self._button_keyer.clicked.connect(self._click_keyer)
         layout.addWidget(self._button_keyer)
 
-        self._button_comm_emulator_with_keyer = QtWidgets.QPushButton("Comm emulator with keyer")
-        self._button_comm_emulator_with_keyer.clicked.connect(self._click_comm_emulator_with_keyer)
-        layout.addWidget(self._button_comm_emulator_with_keyer)
+        self._comm_form = CommEmulatorKeyerForm(layout, callback_attach_device_observer=self._attach_device_observer,
+                                                   callback_detach_device_observer=self._detach_device_observer)
+
 
         self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
         self._button_sound_processor.clicked.connect(self._click_sound_processor)
@@ -39,6 +40,13 @@ class KeyerForm:
 
         widget.setLayout(layout)
         parent.addWidget(widget)
+
+    def _detach_device_observer(self, observer):
+        if self._keyer is not None:
+            self._keyer.detach_observer(observer)
+    def _attach_device_observer(self, observer):
+        if self._keyer is not None:
+            self._keyer.attach_observer(observer)
 
     def _start_sound_processor(self):
         if self._sound_processor is None:
@@ -62,28 +70,6 @@ class KeyerForm:
         else:
             self._logger.debug("Sound keyer is not running, skipping stop.")
 
-    def _start_comm_emulator_with_keyer(self):
-        if self._comm_emulator_with_keyer is None:
-            self._comm_emulator_with_keyer = CommEmulatorWithKeyer()
-            self._comm_emulator_with_keyer.start()
-            self._keyer.attach_observer(self._comm_emulator_with_keyer)
-
-            self._button_comm_emulator_with_keyer.setStyleSheet("background-color: green; ")
-            self._logger.debug("Comm emulator started.")
-        else:
-            self._logger.debug("Comm emulator is already running.")
-
-    def _stop_comm_emulator_with_keyer(self):
-        if self._comm_emulator_with_keyer is not None:
-            if self._keyer is not None:
-                self._keyer.detach_observer(self._comm_emulator_with_keyer)
-
-            self._comm_emulator_with_keyer.stop()
-            self._comm_emulator_with_keyer = None
-            self._button_comm_emulator_with_keyer.setStyleSheet("background-color: red; ")
-            self._logger.debug("Comm emulator stopped.")
-        else:
-            self._logger.debug("Comm emulator is not running, skipping stop.")
 
     def _click_keyer(self):
         if self._keyer is None:
@@ -97,15 +83,11 @@ class KeyerForm:
         else:
             self._stop_sound_processor()
 
-    def _click_comm_emulator_with_keyer(self):
-        if self._comm_emulator_with_keyer is None:
-            self._start_comm_emulator_with_keyer()
-        else:
-            self._stop_comm_emulator_with_keyer()
 
     def stop(self):
         if self._keyer is not None:
             self._stop_sound_processor()
+            self._comm_form.stop()
             self._callback_detach_device_observer(self._keyer)
             self._keyer.stop()
             self._keyer = None

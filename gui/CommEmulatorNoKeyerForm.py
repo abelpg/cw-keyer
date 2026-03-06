@@ -2,7 +2,7 @@ import logging
 
 from PySide6 import QtWidgets
 from core.emulator import CommEmulator
-from gui.SerialForm import SerialForm
+from gui.common.SerialForm import SerialForm
 
 class CommEmulatorNoKeyerForm(SerialForm):
 
@@ -21,7 +21,6 @@ class CommEmulatorNoKeyerForm(SerialForm):
             self._comm_emulator = CommEmulator(port=super()._get_port())
             self._callback_attach_device_observer(self._comm_emulator)
             self._comm_emulator.start()
-
             self._button_comm_emulator.setStyleSheet("background-color: green; ")
             self._logger.debug("Comm emulator started.")
         else:
