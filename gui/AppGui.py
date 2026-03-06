@@ -5,6 +5,7 @@ from core.emulator import CommEmulatorWithKeyer, KeyboardEmulator, CommEmulator
 from core.keyer import Keyer
 from core.sound import SoundProcessor
 from core.device import UsbDevice, KeyboardDevice
+from gui.CommEmulatorNoKeyerForm import CommEmulatorNoKeyerForm
 from gui.DevicesForm import DevicesForm
 
 # Logi 0x046d:0xc52b
@@ -30,7 +31,6 @@ class AppGui(QWidget):
         ################################################################################################################
 
         self._comm_emulator_with_keyer = None
-        self._comm_emulator = None
         self._keyboard_emulator = None
         self._keyer = None
         ####
@@ -44,28 +44,14 @@ class AppGui(QWidget):
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
 
+        self._comm_emulator_form = CommEmulatorNoKeyerForm(self._layout,
+                                                           callback_attach_device_observer=self._devices_form.attach_observer,
+                                                           callback_detach_device_observer=self._devices_form.detach_observer)
+
         self._button_keyer = QtWidgets.QPushButton("Keyer")
         self._button_keyer.clicked.connect(self._click_keyer)
         self._layout.addWidget(self._button_keyer)
 
-        self._layout_comm_emulator = QtWidgets.QHBoxLayout()
-        self._layout_comm_emulator_widget = QtWidgets.QWidget()
-        self._layout_comm_emulator_widget.setMaximumHeight(45)
-
-        self._layout_comm_emulator_widget.setLayout(self._layout_comm_emulator)
-
-        self._button_comm_emulator = QtWidgets.QPushButton("Comm emulator")
-        self._button_comm_emulator.clicked.connect(self._click_comm_emulator)
-
-        self._comm_emulator_port =   QtWidgets.QTextEdit()
-        self._comm_emulator_port.setText("COM4")
-        self._comm_emulator_port.setMaximumHeight(25)
-        self._comm_emulator_port.setMaximumWidth(100)
-
-        self._layout_comm_emulator.addWidget(self._button_comm_emulator)
-        self._layout_comm_emulator.addWidget(self._comm_emulator_port)
-
-        self._layout.addWidget(self._layout_comm_emulator_widget)
 
         self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
         self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
@@ -115,7 +101,6 @@ class AppGui(QWidget):
 
     def _stop_comm_emulator_with_keyer(self):
         if self._comm_emulator_with_keyer is not None:
-
             if self._keyer is not None:
                 self._keyer.detach_observer(self._comm_emulator_with_keyer)
 
@@ -129,7 +114,7 @@ class AppGui(QWidget):
     def _start_keyboard_emulator(self):
         if self._keyboard_emulator is  None:
             self._keyboard_emulator = KeyboardEmulator()
-            self._devices_form.attach_observer(self._comm_emulator)
+            self._devices_form.attach_observer(self._keyboard_emulator)
 
             self._button_keyboard_emulator.setStyleSheet("background-color: green; ")
             self._logger.debug("Keyboard emulator started.")
@@ -138,7 +123,7 @@ class AppGui(QWidget):
 
     def _stop_keyboard_emulator(self):
         if self._keyboard_emulator is not None:
-            self._devices_form.detach_observer(self._comm_emulator)
+            self._devices_form.detach_observer(self._keyboard_emulator)
             self._keyboard_emulator = None
 
             self._button_keyboard_emulator.setStyleSheet("background-color: red; ")
@@ -146,27 +131,6 @@ class AppGui(QWidget):
         else:
             self._logger.debug("Keyboard keyer is not running, skipping stop.")
 
-    def _start_comm_emulator(self):
-        # Protect concurrent loop
-        if self._comm_emulator is  None:
-            self._comm_emulator = CommEmulator()
-            self._devices_form.attach_observer(self._comm_emulator)
-            self._comm_emulator.start()
-
-            self._button_comm_emulator.setStyleSheet("background-color: green; ")
-            self._logger.debug("Comm emulator started.")
-        else:
-            self._logger.debug("Comm emulator is already running.")
-
-    def _stop_comm_emulator(self):
-        if self._comm_emulator is not None:
-            self._devices_form.detach_observer(self._comm_emulator)
-            self._comm_emulator.stop()
-            self._comm_emulator = None
-            self._button_comm_emulator.setStyleSheet("background-color: red; ")
-            self._logger.debug("Comm emulator stopped.")
-        else:
-            self._logger.debug("Comm emulator is not running, skipping stop.")
 
     def _start_keyer(self):
         if self._keyer is None:
@@ -199,7 +163,7 @@ class AppGui(QWidget):
 
         self._stop_keyer()
         self._stop_keyboard_emulator()
-        self._stop_comm_emulator()
+        self._comm_emulator_form.stop()
         self._stop_comm_emulator_with_keyer()
         self._devices_form.stop_all()
 
@@ -228,11 +192,7 @@ class AppGui(QWidget):
         else:
             self._stop_comm_emulator_with_keyer()
 
-    def _click_comm_emulator(self):
-        if self._comm_emulator is None:
-            self._start_comm_emulator()
-        else:
-            self._stop_comm_emulator()
+
 
     def show(self):
         super().show()
