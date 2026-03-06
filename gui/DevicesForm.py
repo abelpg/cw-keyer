@@ -34,7 +34,6 @@ class DevicesForm:
         layout.addWidget(self._button_usb_device)
 
         widget.setLayout(layout)
-
         parent.addWidget(widget)
 
     def _click_keyboard_device(self):

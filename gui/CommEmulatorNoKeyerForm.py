@@ -1,10 +1,7 @@
 import logging
 
 from PySide6 import QtWidgets
-
-from core.config import Configuration
 from core.emulator import CommEmulator
-from core.emulator.CommSerial import CommSerial
 from gui.SerialForm import SerialForm
 
 class CommEmulatorNoKeyerForm(SerialForm):
