@@ -2,6 +2,7 @@ import logging
 
 from PySide6 import QtWidgets
 
+from core.config import Configuration
 from core.emulator import CommEmulatorWithKeyer
 from core.keyer import Keyer
 from core.sound import SoundProcessor
@@ -15,20 +16,39 @@ class KeyerForm:
 
         self._callback_attach_device_observer = callback_attach_device_observer
         self._callback_detach_device_observer = callback_detach_device_observer
+
         self._logger = logging.getLogger(__name__)
 
+        self._config = Configuration()
+
         self._keyer = None
-        self._comm_emulator_with_keyer = None
-        self._keyer = None
-        ####
         self._sound_processor = None
 
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
 
+        ##################
+        widget_h = QtWidgets.QWidget()
+        layout_h = QtWidgets.QHBoxLayout()
+
         self._button_keyer = QtWidgets.QPushButton("Keyer")
         self._button_keyer.clicked.connect(self._click_keyer)
-        layout.addWidget(self._button_keyer)
+        layout_h.addWidget(self._button_keyer)
+
+        label = QtWidgets.QLabel("WPM:")
+        label.setMaximumWidth(40)
+        layout_h.addWidget(label)
+
+
+
+        self._text_wpm = QtWidgets.QLineEdit(self._config.get_config(__name__, key="wpm", default_value="20"))
+        self._text_wpm.setMaximumWidth(50)
+
+        layout_h.addWidget(self._text_wpm)
+
+        widget_h.setLayout(layout_h)
+        layout.addWidget(widget_h)
+        ##################
 
         self._comm_form = CommEmulatorKeyerForm(layout, callback_attach_device_observer=self._attach_device_observer,
                                                    callback_detach_device_observer=self._detach_device_observer)
@@ -99,7 +119,11 @@ class KeyerForm:
 
     def start(self):
         if self._keyer is None:
-            self._keyer = Keyer(wpm=20)
+
+            wpm = self._text_wpm.text()
+            self._config.put_config(__name__, key="wpm", value=wpm)
+
+            self._keyer = Keyer(wpm=int(wpm))
             self._keyer.start()
 
             self._callback_attach_device_observer(self._keyer)

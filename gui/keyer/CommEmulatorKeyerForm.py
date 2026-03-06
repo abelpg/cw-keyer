@@ -23,7 +23,6 @@ class CommEmulatorKeyerForm(SerialForm):
         self._comm_emulator_with_keyer = None
 
 
-
     def _click_comm_emulator(self):
         if self._comm_emulator_with_keyer is None:
             self.start()
@@ -33,7 +32,7 @@ class CommEmulatorKeyerForm(SerialForm):
 
     def start(self):
         if self._comm_emulator_with_keyer is None:
-            self._comm_emulator_with_keyer = CommEmulatorWithKeyer()
+            self._comm_emulator_with_keyer = CommEmulatorWithKeyer(port=self._get_port())
             self._comm_emulator_with_keyer.start()
             self._callback_attach_device_observer(self._comm_emulator_with_keyer)
 
