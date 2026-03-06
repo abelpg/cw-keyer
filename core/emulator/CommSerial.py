@@ -6,6 +6,7 @@ import serial.tools.list_ports
 class CommSerial:
     def __init__(self, port: str = 'COM4', baud_rate: int = 9600, rts_cts = False):
         self._logger = logging.getLogger(__name__)
+        self._logger.debug(f"Initializing CommSerial with serial port {port} with baud rate {baud_rate} and rts/cts flow control {rts_cts}.")
         self._port = port
         self._baud_rate = baud_rate
         self._rts_cts = rts_cts
@@ -37,11 +38,6 @@ class CommSerial:
 
     @staticmethod
     def list_ports():
-        logger = logging.getLogger(__name__)
         ports = serial.tools.list_ports.comports()
-
-        for port, desc, hwid in sorted(ports):
-            logger.debug("{}: {} [{}]".format(port, desc, hwid))
-
         return (port for  port, desc, hwid in ports)
 
