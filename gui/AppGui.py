@@ -30,7 +30,7 @@ class AppGui(QWidget):
     def _create_form(self):
         self._layout = QtWidgets.QVBoxLayout(self)
 
-        self._devices_form = DevicesForm(self._layout, stop_callback=self._stop)
+        self._devices_form = DevicesForm(self._layout, device_stopped_callback=self._device_stopped, device_started_callback=self._device_started)
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
 
@@ -89,10 +89,16 @@ class AppGui(QWidget):
         else:
             self._logger.debug("Keyboard keyer is not running, skipping stop.")
 
+    def _device_started(self):
+        self._keyer_form.start()
+
+    def _device_stopped(self):
+        self._stop(True)
+
     def show(self):
         super().show()
         self._devices_form.start()
-        self._keyer_form.start()
+
 
     def closeEvent(self, event):
         self._stop()
