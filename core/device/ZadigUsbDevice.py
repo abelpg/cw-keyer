@@ -23,8 +23,6 @@ class ZadigUsbDevice(Device):
         self._id_vendor = id_vendor
         self._id_product = id_product
 
-        self._logger.debug("Devices list : " + str(ZadigUsbDevice.find_devices()))
-
         backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
         self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=backend)
 
