@@ -54,12 +54,13 @@ class AppGui(QWidget):
 
 
 
-    def _stop(self):
+    def _stop(self, from_device_form=False):
         self._keyer_form.stop()
         self._stop_keyboard_emulator()
         self._comm_emulator_form.stop()
         #self._stop_comm_emulator_with_keyer()
-        self._devices_form.stop_all()
+        if not from_device_form:
+            self._devices_form.stop_all()
 
 
     def _click_keyboard_emulator(self):
