@@ -34,13 +34,14 @@ class AppGui(QWidget):
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
 
+        self._layout.addWidget(QtWidgets.QLabel("Send direct output from key to comm (CWType):"))
         self._comm_emulator_form = CommEmulatorNoKeyerForm(self._layout,
                                                            callback_attach_device_observer=self._devices_form.attach_observer,
                                                            callback_detach_device_observer=self._devices_form.detach_observer)
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
 
-
+        self._layout.addWidget(QtWidgets.QLabel("Send output from key to Ctr+L / Ctr+R (morse invaders):"))
         self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
         self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
         self._layout.addWidget(self._button_keyboard_emulator)

@@ -10,6 +10,9 @@ from gui.keyer.CommEmulatorKeyerForm import CommEmulatorKeyerForm
 
 
 class KeyerForm:
+
+    CONFIG_KEYER_WPM_KEY = "wpm"
+
     def __init__(self, parent: QtWidgets.QBoxLayout,
                  callback_attach_device_observer=None,
                  callback_detach_device_observer=None):
@@ -39,9 +42,9 @@ class KeyerForm:
         label.setMaximumWidth(40)
         layout_h.addWidget(label)
 
-
-
-        self._text_wpm = QtWidgets.QLineEdit(self._config.get_config(__name__, key="wpm", default_value="20"))
+        self._text_wpm = QtWidgets.QLineEdit(self._config.get_config(__name__,
+                                                                     key=KeyerForm.CONFIG_KEYER_WPM_KEY,
+                                                                     default_value="20"))
         self._text_wpm.setMaximumWidth(50)
 
         layout_h.addWidget(self._text_wpm)
@@ -49,14 +52,17 @@ class KeyerForm:
         widget_h.setLayout(layout_h)
         layout.addWidget(widget_h)
         ##################
+        self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
+        self._button_sound_processor.clicked.connect(self._click_sound_processor)
+        layout.addWidget(self._button_sound_processor)
 
+        layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
+
+        layout.addWidget(QtWidgets.QLabel("Run keyer with comm output (HL2):"))
         self._comm_form = CommEmulatorKeyerForm(layout, callback_attach_device_observer=self._attach_device_observer,
                                                    callback_detach_device_observer=self._detach_device_observer)
 
 
-        self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
-        self._button_sound_processor.clicked.connect(self._click_sound_processor)
-        layout.addWidget(self._button_sound_processor)
 
         widget.setLayout(layout)
         parent.addWidget(widget)
@@ -121,7 +127,7 @@ class KeyerForm:
         if self._keyer is None:
 
             wpm = self._text_wpm.text()
-            self._config.put_config(__name__, key="wpm", value=wpm)
+            self._config.put_config(__name__, key=KeyerForm.CONFIG_KEYER_WPM_KEY, value=wpm)
 
             self._keyer = Keyer(wpm=int(wpm))
             self._keyer.start()

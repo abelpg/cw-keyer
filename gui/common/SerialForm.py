@@ -6,6 +6,8 @@ from core.emulator.CommSerial import CommSerial
 
 class SerialForm:
 
+    CONFIG_SERIAL_PORT_KEY = "comm_emulator_port"
+
     def __init__(self, parent: QtWidgets.QBoxLayout, class_name, button_text : str, callback_click=None):
         self._logger = logging.getLogger(__name__)
 
@@ -34,7 +36,7 @@ class SerialForm:
 
     def _set_ports(self):
         if self._comm_emulator_port is not None:
-            config_port = self._config.get_config(self._class_name, "comm_emulator_port")
+            config_port = self._config.get_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY)
             index = 0
             found = False
             for port in CommSerial.list_ports():
@@ -49,6 +51,6 @@ class SerialForm:
 
     def _get_port(self):
         port = self._comm_emulator_port.currentData()
-        self._config.put_config(self._class_name, "comm_emulator_port", port)
+        self._config.put_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY, port)
         return port
 

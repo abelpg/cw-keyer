@@ -7,7 +7,7 @@ import usb.core
 from core.device import Device
 
 
-class UsbDevice(Device):
+class ZadigUsbDevice(Device):
 
     BYTE_SIZE = 4
     INPUT_ADDR = 0x82
@@ -18,14 +18,15 @@ class UsbDevice(Device):
     # Init USB device
     def __init__(self, id_vendor, id_product):
         super().__init__()
-
         self._logger = logging.getLogger(__name__)
 
         self._id_vendor = id_vendor
         self._id_product = id_product
 
-        be = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
-        self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=be)
+        self._logger.debug("Devices list : " + str(ZadigUsbDevice.find_devices()))
+
+        backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
+        self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=backend)
 
         if self._device is None:
             self._logger.error("Could not find USB device.")
@@ -39,6 +40,37 @@ class UsbDevice(Device):
 
         self._stop = True
         self._thread = None
+
+    @staticmethod
+    def find_devices():
+        logger = logging.getLogger(__name__)
+        backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
+        dev = usb.core.find(find_all=True, backend=backend)
+
+        candidate_devices = []
+
+        for d in dev:
+            valid_device = False
+            logger.debug("######################################################################################")
+            logger.debug("Found device:\n" + str(d))
+            logger.debug("......................................................................................")
+            for config in d.configurations():
+                for interface in config.interfaces():
+                    logger.debug("------------------------------------------------------------------------------")
+                    logger.debug("Found interface:\n" + str(interface))
+                    for endpoint in interface.endpoints():
+                        logger.debug("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+                        logger.debug("Found endpoint:\n" + str(endpoint))
+                        logger.debug("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+                        if (endpoint.bEndpointAddress == ZadigUsbDevice.INPUT_ADDR
+                                and endpoint.wMaxPacketSize == ZadigUsbDevice.BYTE_SIZE):
+                            valid_device = True
+                    logger.debug("------------------------------------------------------------------------------")
+            if valid_device:
+                candidate_devices.append((d.idVendor, d.idProduct))
+
+            logger.debug("......................................................................................")
+        return candidate_devices
 
     def start(self):
         if self._stop:

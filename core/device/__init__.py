@@ -1,11 +1,11 @@
 from .Device import Device
-from .UsbDevice import UsbDevice
+from .ZadigUsbDevice import ZadigUsbDevice
 from .KeyboardDevice import KeyboardDevice
 from .DeviceObserver import DeviceObserver
 
 __all__ = [
     "Device",
-    "UsbDevice",
+    "ZadigUsbDevice",
     "KeyboardDevice",
     "DeviceObserver"
 ]
