@@ -3,15 +3,13 @@ import logging
 from PySide6 import QtWidgets
 
 from core.config import Configuration
-from core.device import ZadigUsbDevice, KeyboardDevice, DeviceObserver, HidDevice, HidDeviceItem
-from core.device.HidDevice import DeviceType
+from core.device import ZadigUsbDevice, KeyboardDevice, DeviceObserver, HidDeviceItem
 
 
 class DevicesForm:
 
-    CONFIG_DEVICE_KEY = "usb_device"
 
-    CONFIG_HID_DEVICE_KEY = "hid_device"
+    CONFIG_DEVICE_KEY = "usb_device"
 
     def __init__(self, parent: QtWidgets.QBoxLayout, device_stopped_callback=None, device_started_callback = None):
         self._parent = parent
@@ -49,22 +47,6 @@ class DevicesForm:
         layout.addWidget(widget_h)
         #####
 
-        #####
-        widget_hid_h = QtWidgets.QWidget()
-        layout_hid_h = QtWidgets.QHBoxLayout()
-
-        self._button_hid_device = QtWidgets.QPushButton("HID USB device")
-        self._button_hid_device.clicked.connect(self._click_hid_device)
-        #
-        self._device_hid_list = QtWidgets.QComboBox()
-        self._set_hid_devices()
-
-        layout_hid_h.addWidget(self._button_hid_device)
-        layout_hid_h.addWidget(self._device_hid_list)
-
-        widget_hid_h.setLayout(layout_hid_h)
-        layout.addWidget(widget_hid_h)
-        #####
 
         widget.setLayout(layout)
         parent.addWidget(widget)
@@ -73,10 +55,10 @@ class DevicesForm:
         device_config = self._config.get_config(__name__, DevicesForm.CONFIG_DEVICE_KEY)
         index = 0
         found = False
-        for device in ZadigUsbDevice.find_devices():
-            str_device = hex(device[0]) + ":" + hex(device[1])
-            self._device_list.addItem(str_device, str_device)
-            if str_device == device_config and not found:
+        for device in ZadigUsbDevice.get_hid_devices():
+            device_key = device.build_key()
+            self._device_list.addItem(str(device), device_key)
+            if device_key == device_config and not found:
                 found = True
             elif not found:
                 index += 1
@@ -84,34 +66,14 @@ class DevicesForm:
         if found:
             self._device_list.setCurrentIndex(index)
 
-    def _set_hid_devices(self):
-        device_config = self._config.get_config(__name__, DevicesForm.CONFIG_HID_DEVICE_KEY)
-        index = 0
-        found = False
-        for device in HidDevice.get_hid_devices():
-            device_key = device.build_key()
-            self._device_hid_list.addItem( str(device), device_key)
-            if device_key == device_config and not found:
-                found = True
-            elif not found:
-                index += 1
-        self._logger.debug(f"Found {index} {found} devices.")
-        if found:
-            self._device_hid_list.setCurrentIndex(index)
-
-    def _get_hid_device(self):
-        device = self._device_hid_list.currentData()
+    def _get_device(self):
+        device = self._device_list.currentData()
         if device is not None:
-            self._config.put_config(__name__, DevicesForm.CONFIG_HID_DEVICE_KEY, device)
+            self._config.put_config(__name__, DevicesForm.CONFIG_DEVICE_KEY, device)
+
             return HidDeviceItem.build_vendor_product_id_from_key(device)
         else:
             return None
-
-    def _get_device(self):
-        device = self._device_list.currentData()
-        self._config.put_config(__name__, DevicesForm.CONFIG_DEVICE_KEY, device)
-        split_device = device.split(":")
-        return int(split_device[0],16), int(split_device[1],16)
 
     def _click_keyboard_device(self):
 
@@ -126,47 +88,13 @@ class DevicesForm:
         else:
             self._stop_usb_device()
 
-    def _click_hid_device(self):
-        if self._hid_device is None:
-            self._start_hid_device()
-        else:
-            self._stop_hid_device()
-
-    def _start_hid_device(self):
-        if self._hid_device is None:
-            self.stop_all()
-
-            device = self._get_hid_device()
-            if device is not None:
-                self._logger.debug("Starting HID USB device" +str(device))
-
-                self._hid_device = HidDevice(device[0], device[1], DeviceType.from_str(device[2]))
-                self._hid_device.start()
-                self._button_hid_device.setStyleSheet("background-color: green; ")
-                self._device_started_callback()
-                self._logger.debug("HID Usb device started.")
-            else:
-                self._logger.warning("No HID device selected, cannot start.")
-        else:
-            self._logger.debug("HID device is already running.")
-
-    def _stop_hid_device(self):
-        if self._hid_device is not None:
-            self._hid_device.stop()
-            self._button_hid_device.setStyleSheet("background-color: red; ")
-            self._hid_device = None
-            self._device_stopped_callback()
-            self._logger.debug("HID Usb device stopped.")
-        else:
-            self._logger.debug("HID Device is not running, skipping stop.")
-
     def _start_usb_device(self):
         if self._usb_device is None:
             self.stop_all()
             device = self._get_device()
-            self._logger.debug("Starting USB device with id: " + str(device))
+
             try:
-                self._usb_device = ZadigUsbDevice(device[0], device[1])
+                self._usb_device = ZadigUsbDevice(device[0], device[1], device[2], device[3], device[4])
             except Exception as e:
                 self._logger.warning("Error initializing USB device: ", e)
                 self._usb_device = None
@@ -214,14 +142,14 @@ class DevicesForm:
 
 
     def start(self):
-        self._start_hid_device()
-        # if not self._start_usb_device():
-        #     self._start_keyboard_device()
+        self._logger.debug("Starting device.")
+
+        if not self._start_usb_device():
+            self._start_keyboard_device()
 
     def stop_all(self):
         self._stop_keyboard_device()
         self._stop_usb_device()
-        self._stop_hid_device()
 
     def attach_observer(self, observer : DeviceObserver):
         if self._usb_device is not None:

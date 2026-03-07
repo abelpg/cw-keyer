@@ -7,68 +7,113 @@ import usb.core
 from core.device import Device
 
 
+class HidDeviceItem:
+
+    TESTED_DEVICES = [
+        {"vendor_id": 0x413d, "product_id": 0x2107, "interface": 1, "endpoint": 0x82, "max_packet_size": 4}
+    ]
+
+
+    HID_INTERFACE = 0x3
+
+    def __init__(self, product_id, vendor_id, interface, endpoint, max_packet_size, manufacturer_string):
+        self._product_id = hex(product_id)
+        self._vendor_id = hex(vendor_id)
+        self._interface = interface
+        self._endpoint = endpoint
+        self._max_packet_size = max_packet_size
+        self._name = "" if manufacturer_string is None else manufacturer_string
+        if self._is_tested_device():
+            self._name += " (DEVICE OK)"
+
+
+    def _is_tested_device(self):
+        for device in self.TESTED_DEVICES:
+            if device["vendor_id"] == int(self._vendor_id,16) and device["product_id"] == int(self._product_id,16) and device["interface"] == self._interface and device["endpoint"] == self._endpoint and device["max_packet_size"] == self._max_packet_size:
+                return True
+        return False
+
+    def build_key(self):
+        return f"{self._vendor_id}:{self._product_id}:{self._interface}:{self._endpoint}:{self._max_packet_size}"
+
+    @staticmethod
+    def build_vendor_product_id_from_key(key):
+        vendor_id, product_id, interface, endpoint, max_packet_size = key.split(":")
+        return int(vendor_id,16), int(product_id,16), int(interface), int(endpoint), int(max_packet_size)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"[{self._vendor_id}] {self._product_id}:{self._interface} - {self._name}"
+
+    def __lt__(self, other):
+        return str(self) < str(other)
+
+    def __gt__(self, other):
+        return str(self) > str(other)
+
+    def __le__(self, other):
+        return str(self) <= str(other)
+
+    def __ge__(self, other):
+        return str(self) >= str(other)
+
+
 class ZadigUsbDevice(Device):
 
-    BYTE_SIZE = 4
-    INPUT_ADDR = 0x82
     CLICK_LEFT = 0x01
     CLICK_RIGHT = 0x02
     CLICK_BOTH = 0x03
 
     # Init USB device
-    def __init__(self, id_vendor, id_product):
+    def __init__(self, id_vendor, id_product, interface, endpoint, max_packet_size):
         super().__init__()
         self._logger = logging.getLogger(__name__)
 
         self._id_vendor = id_vendor
         self._id_product = id_product
+        self._endpoint = endpoint
+        self._interface = interface
+        self._max_packet_size = max_packet_size
 
-        backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
-        self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=backend)
+        self._logger.info("Init Zadig USB device with { \"vendor_id\": " +hex(id_vendor)
+                          + ", \"product_id\": " + hex(id_product)
+                          + ", \"interface\": " +str(interface)
+                          + ", \"endpoint\": " + hex(endpoint)
+                          + ", \"max_packet_size\": " + str(max_packet_size) + "}")
+
+        self._backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
+        self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=self._backend)
 
         if self._device is None:
             self._logger.error("Could not find USB device.")
             raise ValueError('Device not found ' + id_vendor + '/' + id_product)
 
-        self._interface, self._endpoint = self._find_interface_endpoint()
-
-        if self._interface is None or self._endpoint is None:
-            self._logger.error("No interface or endpoint found for USB device.")
-            raise ValueError('No interface or endpoint found')
-
         self._stop = True
         self._thread = None
 
     @staticmethod
-    def find_devices():
-        logger = logging.getLogger(__name__)
+    def get_hid_devices():
+        devices = []
         backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
-        dev = usb.core.find(find_all=True, backend=backend)
-
-        candidate_devices = []
-
-        for d in dev:
-            valid_device = False
-            logger.debug("######################################################################################")
-            logger.debug("Found device:\n" + str(d))
-            logger.debug("......................................................................................")
-            for config in d.configurations():
+        for device in usb.core.find(find_all=True, backend=backend):
+            for config in device.configurations():
                 for interface in config.interfaces():
-                    logger.debug("------------------------------------------------------------------------------")
-                    logger.debug("Found interface:\n" + str(interface))
-                    for endpoint in interface.endpoints():
-                        logger.debug("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-                        logger.debug("Found endpoint:\n" + str(endpoint))
-                        logger.debug("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-                        if (endpoint.bEndpointAddress == ZadigUsbDevice.INPUT_ADDR
-                                and endpoint.wMaxPacketSize == ZadigUsbDevice.BYTE_SIZE):
-                            valid_device = True
-                    logger.debug("------------------------------------------------------------------------------")
-            if valid_device:
-                candidate_devices.append((d.idVendor, d.idProduct))
+                    if interface.bInterfaceClass == HidDeviceItem.HID_INTERFACE:
+                        for endpoint in interface.endpoints():
+                            devices.append(HidDeviceItem(
+                                vendor_id=device.idVendor,
+                                product_id=device.idProduct,
+                                interface=interface.bInterfaceNumber,
+                                endpoint=endpoint.bEndpointAddress,
+                                max_packet_size=endpoint.wMaxPacketSize,
+                                manufacturer_string=usb.util.get_string(device, device.iManufacturer)
+                            ))
 
-            logger.debug("......................................................................................")
-        return candidate_devices
+        devices.sort()
+        return devices
+
 
     def start(self):
         if self._stop:
@@ -82,18 +127,6 @@ class ZadigUsbDevice(Device):
 
     def is_running(self):
         return not self._stop
-
-    """
-    Find the interface and endpoint of the USB device. It will look for the interface and endpoint that match the.
-    Improve: calculate the endpoint address and packet size from the device instead of hardcoding it.
-    """
-    def _find_interface_endpoint(self):
-        for config in self._device.configurations():
-            for interface in config.interfaces():
-                for endpoint in interface.endpoints():
-                    if endpoint.bEndpointAddress == self.INPUT_ADDR and endpoint.wMaxPacketSize == self.BYTE_SIZE:
-                        return interface, endpoint
-        return None, None
 
 
     """
@@ -120,26 +153,27 @@ class ZadigUsbDevice(Device):
     def _run_usb_device_collect(self):
         self._logger.info("Starting USB device collect thread.")
         # Claim interface
-        usb.util.claim_interface(self._device, self._interface)
 
-        while not self._stop:
-            try:
-                data = self._device.read(self._endpoint.bEndpointAddress,self._endpoint.wMaxPacketSize)
-                if data[0] == self.CLICK_BOTH:
-                    self._set_dit_dah( True,True)
-                elif data[0] == self.CLICK_LEFT:
-                    self._set_dit_dah( True,False)
-                elif data[0] == self.CLICK_RIGHT:
-                    self._set_dit_dah(False,True)
-                else:
-                    self._set_dit_dah(False, False)
+        try:
+            usb.util.claim_interface(self._device, self._interface)
+            while not self._stop:
+                try:
+                    data = self._device.read(self._endpoint,self._max_packet_size)
+                    if data[0] == self.CLICK_BOTH:
+                        self._set_dit_dah( True,True)
+                    elif data[0] == self.CLICK_LEFT:
+                        self._set_dit_dah( True,False)
+                    elif data[0] == self.CLICK_RIGHT:
+                        self._set_dit_dah(False,True)
+                    else:
+                        self._set_dit_dah(False, False)
 
-
-            except usb.core.USBError as e:
-                data = None
-                if e.args == ('Operation timed out',):
-                    continue
-
-        # Release interface
-        usb.util.release_interface(self._device, self._interface)
-        self._logger.info("Stopped USB device collect thread.")
+                except usb.core.USBError as e:
+                    data = None
+                    if e.args == ('Operation timed out',):
+                        continue
+        finally:
+            # Release interface
+            usb.util.release_interface(self._device, self._interface)
+            usb.util.dispose_resources(self._device)
+            self._logger.info("Stopped USB device collect thread.")
