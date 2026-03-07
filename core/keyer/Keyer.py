@@ -144,13 +144,11 @@ class Keyer(DeviceObserver):
 
     """
     Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
-    If both are pressed, it will send both signals. If none is pressed, it will sleep for a short time to prevent high CPU usage.
+    If both are pressed, it will send both signals. To improve timing, there are two sleeps after and before.
     """
     def _run_iambic(self):
         while not self._thread_stop:
-            sleep(self._space_time)
-            #self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
-
+            sleep(self._space_time / 2)
             if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed):
                 self._send_dit()
                 sleep(self._space_time)
@@ -159,3 +157,4 @@ class Keyer(DeviceObserver):
                 self._send_dit()
             elif self._dah or self._dah_pressed:
                 self._send_dah()
+            sleep(self._space_time / 2)
