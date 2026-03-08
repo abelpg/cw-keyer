@@ -110,7 +110,6 @@ class Keyer(DeviceObserver):
     30 WPM: Dit = 40ms, Dah = 120ms 
     """
     def _calculate(self, wpm:float):
-
         # Character and word spacing in seconds, rounded to 3 decimals
         dit_time = self.TIME_BASE / wpm / 1000.0
         dah_time = dit_time * 3.0
@@ -118,8 +117,6 @@ class Keyer(DeviceObserver):
 
         self._logger.info("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
         return dit_time, dah_time, space_time
-
-
 
 
     """
@@ -134,7 +131,7 @@ class Keyer(DeviceObserver):
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dit_time +self._space_time)
+        sleep(self._dit_time + (self._space_time / 2.0))
 
         with self._thread_dit_lock:
             self._dit = False
@@ -149,7 +146,7 @@ class Keyer(DeviceObserver):
         for observer in self._observers:
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
 
-        sleep(self._dah_time +self._space_time)
+        sleep(self._dah_time + (self._space_time / 2.0))
 
         with self._thread_dah_lock:
             self._dah = False
@@ -170,15 +167,17 @@ class Keyer(DeviceObserver):
 
             if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed) and not last_dit_alone:
                 # last dit prevent the iambic bug, if the last dit is alone, it will not send dah immediately after dit, but wait for the next loop to check if dah is still pressed.
+                sleep(self._space_time / 2)
                 self._send_dit()
                 self._send_dah()
                 last_dit_alone = False
             elif self._dah or self._dah_pressed:
+                sleep(self._space_time / 2)
                 self._send_dah()
                 last_dit_alone = False
             elif self._dit or self._dit_pressed:
+                sleep(self._space_time / 2)
                 self._send_dit()
                 last_dit_alone = True
             else:
                 last_dit_alone = False
-                sleep(self._space_time / 2)
