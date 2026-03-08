@@ -4,9 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from core.device import DeviceObserver
 from abc import ABC, abstractmethod
 
-
-
-
 class Device(ABC):
 
     def __init__(self):

@@ -3,11 +3,15 @@ import threading
 import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
+
+from core.common import BaseItem
 #os.environ['PYUSB_DEBUG'] = 'debug'
 from core.device import Device
 
-
-class HidDeviceItem:
+"""
+This class represents a USB device that is used to control the keyer. It uses the pyusb library to communicate with the device.
+"""
+class HidDeviceItem(BaseItem):
 
     TESTED_DEVICES = [
         {"vendor_id": 0x413d, "product_id": 0x2107, "interface": 1, "endpoint": 0x82, "max_packet_size": 4}
@@ -17,6 +21,7 @@ class HidDeviceItem:
     HID_INTERFACE = 0x3
 
     def __init__(self, product_id, vendor_id, interface, endpoint, max_packet_size, manufacturer_string):
+        super().__init__()
         self._product_id = hex(product_id)
         self._vendor_id = hex(vendor_id)
         self._interface = interface
@@ -41,23 +46,8 @@ class HidDeviceItem:
         vendor_id, product_id, interface, endpoint, max_packet_size = key.split(":")
         return int(vendor_id,16), int(product_id,16), int(interface), int(endpoint), int(max_packet_size)
 
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
+    def _to_string(self):
         return f"[{self._vendor_id}] {self._product_id}:{self._interface} - {self._name}"
-
-    def __lt__(self, other):
-        return str(self) < str(other)
-
-    def __gt__(self, other):
-        return str(self) > str(other)
-
-    def __le__(self, other):
-        return str(self) <= str(other)
-
-    def __ge__(self, other):
-        return str(self) >= str(other)
 
 
 class ZadigUsbDevice(Device):
