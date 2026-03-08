@@ -6,11 +6,12 @@ from core.sound import ToneGenerator
 class SoundProcessor(KeyerObserver):
 
     # State machine init. dit dah
-    def __init__(self):
+    def __init__(self, frequency: int = 600):
         self._logger = logging.getLogger(__name__)
         # Tone
         self._tone_generator = None
         self._started = False
+        self._frequency = frequency
 
     # Play dit and release dit
     def play_dit(self,time_dit:float, silence: float):
@@ -27,7 +28,7 @@ class SoundProcessor(KeyerObserver):
             self._logger.warning("SoundKeyer is not started. Please call start() method before playing tones.")
 
     def start(self):
-        self._tone_generator = ToneGenerator()
+        self._tone_generator = ToneGenerator(frequency=self._frequency)
         self._tone_generator.start()
         self._started = True
 

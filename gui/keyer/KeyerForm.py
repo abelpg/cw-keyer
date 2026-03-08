@@ -3,10 +3,9 @@ import logging
 from PySide6 import QtWidgets
 
 from core.config import Configuration
-from core.emulator import CommEmulatorWithKeyer
 from core.keyer import Keyer
-from core.sound import SoundProcessor
-from gui.keyer.CommEmulatorKeyerForm import CommEmulatorKeyerForm
+from gui.keyer import CommEmulatorKeyerForm
+from gui.sound import SoundForm
 
 
 class KeyerForm:
@@ -25,8 +24,6 @@ class KeyerForm:
         self._config = Configuration()
 
         self._keyer = None
-        self._sound_processor = None
-
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
 
@@ -52,17 +49,19 @@ class KeyerForm:
         widget_h.setLayout(layout_h)
         layout.addWidget(widget_h)
         ##################
-        self._button_sound_processor = QtWidgets.QPushButton("Sound processor")
-        self._button_sound_processor.clicked.connect(self._click_sound_processor)
-        layout.addWidget(self._button_sound_processor)
+
+        self._sound_form = SoundForm(parent=layout,
+                                     callback_attach_device_observer=self._attach_device_observer,
+                                     callback_detach_device_observer=self._detach_device_observer)
 
         layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
 
+        ##################
         layout.addWidget(QtWidgets.QLabel("Run keyer with comm output (HL2):"))
-        self._comm_form = CommEmulatorKeyerForm(layout, callback_attach_device_observer=self._attach_device_observer,
-                                                   callback_detach_device_observer=self._detach_device_observer)
 
-
+        self._comm_form = CommEmulatorKeyerForm(layout,
+                                                callback_attach_device_observer=self._attach_device_observer,
+                                                callback_detach_device_observer=self._detach_device_observer)
 
         widget.setLayout(layout)
         parent.addWidget(widget)
@@ -74,28 +73,6 @@ class KeyerForm:
         if self._keyer is not None:
             self._keyer.attach_observer(observer)
 
-    def _start_sound_processor(self):
-        if self._sound_processor is None:
-            self._sound_processor = SoundProcessor()
-            self._sound_processor.start()
-            self._keyer.attach_observer(self._sound_processor)
-
-            self._button_sound_processor.setStyleSheet("background-color: green; ")
-            self._logger.debug("Sound processor started.")
-        else:
-            self._logger.debug("Sound keyer is already running.")
-
-    def _stop_sound_processor(self):
-        if self._sound_processor is not None:
-            self._sound_processor.stop()
-            self._keyer.detach_observer(self._sound_processor)
-            self._sound_processor = None
-
-            self._button_sound_processor.setStyleSheet("background-color: red; ")
-            self._logger.debug("Sound processor stopped.")
-        else:
-            self._logger.debug("Sound keyer is not running, skipping stop.")
-
 
     def _click_keyer(self):
         if self._keyer is None:
@@ -103,16 +80,10 @@ class KeyerForm:
         else:
             self.stop()
 
-    def _click_sound_processor(self):
-        if self._sound_processor is None:
-            self._start_sound_processor()
-        else:
-            self._stop_sound_processor()
-
 
     def stop(self):
         if self._keyer is not None:
-            self._stop_sound_processor()
+            self._sound_form.stop()
             self._comm_form.stop()
             self._callback_detach_device_observer(self._keyer)
             self._keyer.stop()
@@ -134,7 +105,7 @@ class KeyerForm:
 
             self._callback_attach_device_observer(self._keyer)
 
-            self._start_sound_processor()
+            self._sound_form.start()
 
             self._button_keyer.setStyleSheet("background-color: green; ")
             self._logger.debug("Keyer started.")

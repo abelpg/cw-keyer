@@ -3,13 +3,14 @@ import logging
 from PySide6 import QtWidgets
 
 from core.emulator import CommEmulatorWithKeyer
-from gui.common.SerialForm import SerialForm
+from gui.common import SerialForm
 
 class CommEmulatorKeyerForm(SerialForm):
 
-    def __init__(self, parent: QtWidgets.QBoxLayout,
-                 callback_attach_device_observer=None,
-                 callback_detach_device_observer=None):
+    def __init__(self,
+                 parent: QtWidgets.QBoxLayout,
+                 callback_attach_device_observer,
+                 callback_detach_device_observer):
 
         super().__init__(parent, __name__, button_text="Comm emulator with keyer",
                          callback_click=self._click_comm_emulator)
