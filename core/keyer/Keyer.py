@@ -34,7 +34,7 @@ class Keyer(DeviceObserver):
         self._thread_dah_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
-        self._thread_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="Keyer observers ThreadPool")
+        self._thread_pool = ThreadPoolExecutor(max_workers=20, thread_name_prefix="Keyer observers ThreadPool")
 
         self._started = False
 
@@ -164,19 +164,17 @@ class Keyer(DeviceObserver):
         while not self._thread_stop:
 
             self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
-
+            sleep(self._space_time / 2)
             if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed) and not last_dit_alone:
                 # last dit prevent the iambic bug, if the last dit is alone, it will not send dah immediately after dit, but wait for the next loop to check if dah is still pressed.
-                sleep(self._space_time / 2)
                 self._send_dit()
+                sleep(self._space_time / 2)
                 self._send_dah()
                 last_dit_alone = False
             elif self._dah or self._dah_pressed:
-                sleep(self._space_time / 2)
                 self._send_dah()
                 last_dit_alone = False
             elif self._dit or self._dit_pressed:
-                sleep(self._space_time / 2)
                 self._send_dit()
                 last_dit_alone = True
             else:

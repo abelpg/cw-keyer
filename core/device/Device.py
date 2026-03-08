@@ -11,7 +11,7 @@ class Device(ABC):
         self._dit = False
         self._dah = False
         self._observers: List[DeviceObserver] = []
-        self._thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="UsbDevice observers ThreadPool")
+        self._thread_pool = ThreadPoolExecutor(max_workers=10, thread_name_prefix="UsbDevice observers ThreadPool")
 
     def attach_observer(self, observer: DeviceObserver):
         self._logger.debug("attach observer to device")
