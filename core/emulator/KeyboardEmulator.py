@@ -1,5 +1,5 @@
-from pynput.keyboard import Key, Controller, Listener
-from core.DeviceObserver import DeviceObserver
+from pynput.keyboard import Key, Controller
+from core.device import DeviceObserver
 
 """
 This class is responsible for listening to the keyboard events and sending the corresponding events to the keyer. 
@@ -8,7 +8,7 @@ It implements the UsbDeviceObserver interface to receive notifications when the 
 class KeyboardEmulator(DeviceObserver):
 
     def __init__(self):
-        # KB listener
+        super().__init__()
         self._controller = Controller()
 
     """

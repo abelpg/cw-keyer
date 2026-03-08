@@ -1,9 +1,34 @@
+import logging
 import struct
-
 import pyaudio
 import numpy as np
+
+from core.common import BaseItem
+
+"""
+This module provides a ToneGenerator class that can be used to generate and play tones through the audio output device.
+"""
+class AudioDevice(BaseItem):
+
+    def __init__(self, device_info ):
+        super().__init__()
+
+        self.index = device_info["index"]
+        self.name = device_info["name"]
+        self.default_sample_rate = device_info["defaultSampleRate"]
+
+    def _to_string(self):
+        return f"{"0" +str(self.index) if self.index < 10 else self.index} : {self.name}"
+
 class ToneGenerator:
-    def __init__(self, sample_rate: int = 44100, frames_per_buffer: int = 1000, frequency: int = 600, amplitude: float = 0.5):
+
+    def __init__(self,
+                 sample_rate: int = 44100,
+                 frames_per_buffer: int = 1000,
+                 frequency: int = 600,
+                 amplitude: float = 0.5,
+                 output_device : AudioDevice = None):
+        self._logger = logging.getLogger(__name__)
         # Init audio
         self._audio = pyaudio.PyAudio()
 
@@ -11,6 +36,8 @@ class ToneGenerator:
         self._frames_per_buffer = frames_per_buffer
         self._frequency = frequency
         self._amplitude = amplitude
+
+        self._output_device = output_device
 
         self._omega = float(self._frequency) * (np.pi * 2.0) / float(self._sample_rate)
 
@@ -55,13 +82,17 @@ class ToneGenerator:
                 for n in range(silence_cycles):
                     self._audio_stream.write(self._silence_cycle)
         else:
-            print("ToneGenerator is not started. Please call start() method before playing tones.")
+            self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
     def start(self):
+
+        self._logger.info("ToneGenerator is started " +str(self._sample_rate) +" sample rate and  output " + str(self._output_device))
+
         self._audio_stream = self._audio.open(format=pyaudio.paFloat32,
                                               rate=self._sample_rate,
                                               channels=1,
                                               output=True,
+                                              output_device_index=self._output_device.index if self._output_device else None,
                                               frames_per_buffer=self._frames_per_buffer)
 
 
@@ -74,3 +105,19 @@ class ToneGenerator:
         self._audio.terminate()
         self._started = False
 
+    """
+    Get the list of available output audio devices.
+    Each device is represented as an AudioDevice object containing its index, name, and default sample rate.
+    The list is sorted by device index for easier selection.
+    """
+    @staticmethod
+    def get_available_output_devices():
+        audio = pyaudio.PyAudio()
+        output_devices = []
+        for i in range(audio.get_device_count()):
+            device_info = audio.get_device_info_by_index(i)
+            if device_info.get('maxOutputChannels') > 0:
+                output_devices.append(AudioDevice(device_info))
+        audio.terminate()
+        output_devices.sort()
+        return output_devices
