@@ -30,7 +30,8 @@ class Keyer(DeviceObserver):
         self._thread_stop = False
 
         # Locks to prevent concurrent modification
-        self._thread_lock = threading.Lock()
+        self._thread_dit_lock = threading.Lock()
+        self._thread_dah_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="Keyer observers ThreadPool")
@@ -42,20 +43,32 @@ class Keyer(DeviceObserver):
     """
     def on_dah(self, pressed: bool):
         self._check_started()
+        self._logger.debug("On dah in" +str(pressed))
         if pressed:
-            self._dah_pressed, self._dah =  True, True
+            self._dah_pressed = True
+            if not self._dah:
+                with self._thread_dah_lock:
+                    self._dah = True
         else:
             self._dah_pressed = False
+        self._logger.debug("On dah out" +str(pressed))
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
     """
     def on_dit(self, pressed: bool):
         self._check_started()
+        self._logger.debug("On dit in " +str(pressed))
         if pressed:
-            self._dit_pressed, self._dit = True, True
+            self._dit_pressed = True
+        if pressed:
+            self._dit_pressed = True
+            if not self._dit:
+                with self._thread_dit_lock:
+                    self._dit = True
         else:
             self._dit_pressed = False
+        self._logger.debug("On dit out "+str(pressed))
 
     """
     Add observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
@@ -123,7 +136,8 @@ class Keyer(DeviceObserver):
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
         sleep(self._dit_time)
-        with self._thread_lock:
+
+        with self._thread_dit_lock:
             self._dit = False
         self._logger.debug("SEND DIT {}s {}s".format(self._dit_time, time() - ts))
 
@@ -137,7 +151,8 @@ class Keyer(DeviceObserver):
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
 
         sleep(self._dah_time)
-        with self._thread_lock:
+
+        with self._thread_dah_lock:
             self._dah = False
         self._logger.debug("SEND DAH {}s {}s".format(self._dah_time, time() - ts))
 
@@ -147,14 +162,25 @@ class Keyer(DeviceObserver):
     If both are pressed, it will send both signals. To improve timing, there are two sleeps after and before.
     """
     def _run_iambic(self):
+
+        last_dit_alone = False
+
         while not self._thread_stop:
+
+            self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
             sleep(self._space_time / 2)
-            if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed):
+            if (self._dit or self._dit_pressed) and (self._dah or self._dah_pressed) and not last_dit_alone:
+                # last dit prevent the iambic bug, if the last dit is alone, it will not send dah immediately after dit, but wait for the next loop to check if dah is still pressed.
                 self._send_dit()
                 sleep(self._space_time)
                 self._send_dah()
-            elif self._dit or self._dit_pressed:
-                self._send_dit()
+                last_dit_alone = False
             elif self._dah or self._dah_pressed:
                 self._send_dah()
+                last_dit_alone = False
+            elif self._dit or self._dit_pressed:
+                self._send_dit()
+                last_dit_alone = True
+            else:
+                last_dit_alone = False
             sleep(self._space_time / 2)

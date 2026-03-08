@@ -21,8 +21,7 @@ class AppGui(QWidget):
         self._logger = logging.getLogger(__name__)
 
         self.setWindowTitle("Keyer application")
-        #self.resize(800, 600)
-        self.setMinimumSize(300, 300)
+        self.setMinimumSize(400,400)
         self._create_form()
 
         self._keyboard_emulator = None
