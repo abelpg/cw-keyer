@@ -21,8 +21,6 @@ class KeyerForm:
 
         self._logger = logging.getLogger(__name__)
 
-        self._config = Configuration()
-
         self._keyer = None
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
@@ -39,7 +37,7 @@ class KeyerForm:
         label.setMaximumWidth(40)
         layout_h.addWidget(label)
 
-        self._text_wpm = QtWidgets.QLineEdit(self._config.get_config(__name__,
+        self._text_wpm = QtWidgets.QLineEdit(Configuration.get_config(__name__,
                                                                      key=KeyerForm.CONFIG_KEYER_WPM_KEY,
                                                                      default_value="20"))
         self._text_wpm.setMaximumWidth(50)
@@ -98,7 +96,7 @@ class KeyerForm:
         if self._keyer is None:
 
             wpm = self._text_wpm.text()
-            self._config.put_config(__name__, key=KeyerForm.CONFIG_KEYER_WPM_KEY, value=wpm)
+            Configuration.put_config(__name__, key=KeyerForm.CONFIG_KEYER_WPM_KEY, value=wpm)
 
             self._keyer = Keyer(wpm=int(wpm))
             self._keyer.start()
