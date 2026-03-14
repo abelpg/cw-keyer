@@ -17,8 +17,6 @@ class DevicesForm:
         self._device_stopped_callback = device_stopped_callback
         self._device_started_callback = device_started_callback
 
-        self._config = Configuration()
-
         self._usb_device = None
         self._keyboard_device = None
         self._hid_device = None
@@ -52,7 +50,7 @@ class DevicesForm:
         parent.addWidget(widget)
 
     def _set_devices(self):
-        device_config = self._config.get_config(__name__, DevicesForm.CONFIG_DEVICE_KEY)
+        device_config = Configuration.get_config(__name__, DevicesForm.CONFIG_DEVICE_KEY)
         index = 0
         found = False
         for device in ZadigUsbDevice.get_hid_devices():
@@ -69,7 +67,7 @@ class DevicesForm:
     def _get_device(self):
         device = self._device_list.currentData()
         if device is not None:
-            self._config.put_config(__name__, DevicesForm.CONFIG_DEVICE_KEY, device)
+            Configuration.put_config(__name__, DevicesForm.CONFIG_DEVICE_KEY, device)
 
             return HidDeviceItem.build_vendor_product_id_from_key(device)
         else:
