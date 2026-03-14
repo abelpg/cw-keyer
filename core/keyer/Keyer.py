@@ -131,7 +131,7 @@ class Keyer(DeviceObserver):
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dit_time + self._space_time)
+        sleep(self._dit_time)
 
         with self._thread_dit_lock:
             self._dit = False
@@ -146,7 +146,7 @@ class Keyer(DeviceObserver):
         for observer in self._observers:
             self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
 
-        sleep(self._dah_time + self._space_time)
+        sleep(self._dah_time)
 
         with self._thread_dah_lock:
             self._dah = False
@@ -165,11 +165,20 @@ class Keyer(DeviceObserver):
             self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
             sleep(self._space_time)
 
+            sent = False
             while self._dit_pressed or self._dah_pressed or self._dit or self._dah:
+
+                if sent:
+                    sleep(self._space_time)
+                    sent = False
 
                 if self._dit or self._dit_pressed:
                     self._send_dit()
+                    sent = True
 
                 if self._dah or self._dah_pressed:
+                    if sent:
+                        sleep(self._space_time)
                     self._send_dah()
+                    sent = True
 
