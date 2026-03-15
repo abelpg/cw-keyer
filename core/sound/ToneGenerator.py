@@ -24,7 +24,7 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44000,
-                 frames_per_buffer: int = 2000,
+                 frames_per_buffer: int = 10,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -54,8 +54,6 @@ class ToneGenerator:
         tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
         range_n = self._calculate_points_cycle()
 
-        time_scale = self._frequency * 2 * np.pi /  self._sample_rate
-
         envelope_samples = int(self._sample_rate * tone_duration / 1000.0)
 
         tone_complete = []
@@ -75,7 +73,7 @@ class ToneGenerator:
             # Calculate 1 cycle
             data = []
             for n in range(range_n):
-                xn =  np.sin(n * time_scale)
+                xn =  np.sin(n * self._omega)
                 data.append(struct.pack('f',  local_amplitude  * xn))
 
             tone_complete.append(b''.join(data))
@@ -100,7 +98,7 @@ class ToneGenerator:
                 self._audio_stream.write(data)
 
             if silence_duration > 0:
-                silence_cycles = int(self._frequency * silence_duration)
+                silence_cycles = int(self._frequency * silence_duration /2.0)
                 for n in range(silence_cycles):
                     self._audio_stream.write(self._silence_cycle)
         else:
