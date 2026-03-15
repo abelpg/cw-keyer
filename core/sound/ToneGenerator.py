@@ -24,9 +24,9 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44100,
-                 frames_per_buffer: int = 1000,
+                 frames_per_buffer: int = 500,
                  frequency: int = 600,
-                 amplitude: float = 0.5,
+                 amplitude: float = 0.3,
                  output_device : AudioDevice = None):
         self._logger = logging.getLogger(__name__)
         # Init audio
@@ -42,8 +42,6 @@ class ToneGenerator:
         self._omega = float(self._frequency) * (np.pi * 2.0) / float(self._sample_rate)
 
         self._audio_stream = None
-
-        self._tone_cycle = None
         self._silence_cycle = None
         self._started = False
 
@@ -65,43 +63,36 @@ class ToneGenerator:
     def _generate_tone(self, tone_duration: float):
         tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
         range_n = self._calculate_points_cycle()
+        time_scale = self._frequency * 2 * np.pi /  self._sample_rate
 
-        dt = 1.0 / self._sample_rate
+        total_points = tone_cycles * range_n
 
-        envelope_samples = 5
+        envelope_samples = int(total_points * 10.0 / 100.0)
 
-        tone_complete = []
 
         self._logger.debug("Generating tone with frequency: " + str(self._frequency)
                            + " Hz, duration: " + str(tone_duration)
                            + " seconds, which corresponds to "
-                           + str(tone_cycles) + " cycles.")
-
-        yo = 0
+                           + str(tone_cycles) + " cycles and envelope samples: " + str(envelope_samples))
+        tone_complete = []
+        current_point = 0
         for cyc in range(tone_cycles):
-
-            local_amplitude = self._amplitude
-            if cyc < envelope_samples:
-                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * cyc / envelope_samples)), 1.0);
-            elif cyc >= (tone_cycles - envelope_samples):
-                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * (tone_cycles - cyc) / local_amplitude)), 1.0);
-
             # Calculate 1 cycle
             data = []
+
             for n in range(range_n):
-                xn =  np.sin(2 * np.pi * self._frequency * n * dt)
+                local_amplitude = self._amplitude
+                if current_point < envelope_samples:
+                    local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * cyc / envelope_samples)), 1.0)
+                elif current_point >= (total_points - envelope_samples):
+                    local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * (total_points - current_point) / envelope_samples)),
+                                                  1.0)
 
-                yn = xn - (np.exp((-np.pi * self._frequency / (50.0 * self._sample_rate))) * yo)  # Low pass filter
-                yo = yn
-
-                value = local_amplitude * yn * 1.95
-
-                #data.append(struct.pack('f', value))
-                data.append(struct.pack('f', local_amplitude  * xn))
-
+                xn =  np.sin(n * time_scale)
+                data.append(struct.pack('f',  local_amplitude  * xn))
+                current_point += 1
+            # Append cycle
             tone_complete.append(b''.join(data))
-
-        self._logger.debug(str(tone_complete))
 
         return tone_complete
 
@@ -109,19 +100,14 @@ class ToneGenerator:
     def _generate_silence_cycle(self):
         range_n = self._calculate_points_cycle()
         # Calculate 1 cycle
-        cycle =  (0 for n in range(range_n))
+        data = []
+        for n in range(range_n):
+            data.append(struct.pack('f', 0))
         # Transform to bytes
-        data = b''.join(struct.pack('f', samp) for samp in cycle)
-        return data
+        return b''.join(data)
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
         if self._started:
-            # tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
-            #
-            # self._logger.debug("Tone cycles: " + str(tone_cycles) + " for tone duration: " + str(tone_duration) + " seconds")
-            #
-            # for n in range(tone_cycles):
-            #     self._audio_stream.write(self._tone_cycle)
 
             tone_data = self._generate_tone(tone_duration)
             for data in tone_data:
@@ -145,9 +131,6 @@ class ToneGenerator:
                                               output_device_index=self._output_device.index if self._output_device else None,
                                               frames_per_buffer=self._frames_per_buffer)
 
-
-        self._tone_cycle = self._generate_tone_cycle()
-        self._logger.debug("ToneGenerator tone cycle generated" + str(self._tone_cycle) + " bytes")
         self._silence_cycle = self._generate_silence_cycle()
         self._started = True
 
