@@ -1,5 +1,6 @@
 import logging
 import threading
+from asyncio import timeout_at
 from concurrent.futures import ThreadPoolExecutor
 from time import sleep, time
 
@@ -35,6 +36,16 @@ class Keyer(DeviceObserver):
         self._observers: List[KeyerObserver] = []
         self._started = False
 
+        self._last_dit_pressed = None
+        self._last_dah_pressed = None
+
+
+    def _wait_for_release(self,last_time_pressed):
+        time_release = self._dit_time + 0.01 - (time() - last_time_pressed)
+        if time_release > 0:
+            self._logger.debug("Waiting for release for {} seconds".format(time_release))
+            sleep(time_release)
+
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
@@ -42,13 +53,17 @@ class Keyer(DeviceObserver):
         self._check_started()
         self._logger.debug("On dah in" +str(pressed))
         if pressed:
+            self._last_dah_pressed = time()
             self._dah_pressed = True
             if not self._dah:
                 with self._thread_lock:
                     self._dah = True
         else:
+            self._wait_for_release(self._last_dah_pressed)
             self._dah_pressed = False
         self._logger.debug("On dah out" +str(pressed))
+
+
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
@@ -57,11 +72,13 @@ class Keyer(DeviceObserver):
         self._check_started()
         self._logger.debug("On dit in " +str(pressed))
         if pressed:
+            self._last_dit_pressed = time()
             self._dit_pressed = True
             if not self._dit:
                 with self._thread_lock:
                     self._dit = True
         else:
+            self._wait_for_release(self._last_dit_pressed )
             self._dit_pressed = False
         self._logger.debug("On dit out "+str(pressed))
 
