@@ -30,8 +30,7 @@ class Keyer(DeviceObserver):
         self._thread_stop = False
 
         # Locks to prevent concurrent modification
-        self._thread_dit_lock = threading.Lock()
-        self._thread_dah_lock = threading.Lock()
+        self._thread_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
         self._thread_pool = ThreadPoolExecutor(max_workers=20, thread_name_prefix="Keyer observers ThreadPool")
@@ -47,7 +46,7 @@ class Keyer(DeviceObserver):
         if pressed:
             self._dah_pressed = True
             if not self._dah:
-                with self._thread_dah_lock:
+                with self._thread_lock:
                     self._dah = True
         else:
             self._dah_pressed = False
@@ -64,7 +63,7 @@ class Keyer(DeviceObserver):
         if pressed:
             self._dit_pressed = True
             if not self._dit:
-                with self._thread_dit_lock:
+                with self._thread_lock:
                     self._dit = True
         else:
             self._dit_pressed = False
@@ -133,7 +132,7 @@ class Keyer(DeviceObserver):
 
         sleep(self._dit_time)
 
-        with self._thread_dit_lock:
+        with self._thread_lock:
             self._dit = False
 
         self._print_time(ts, "DIT")
@@ -155,7 +154,7 @@ class Keyer(DeviceObserver):
 
         sleep(self._dah_time)
 
-        with self._thread_dah_lock:
+        with self._thread_lock:
             self._dah = False
 
         self._print_time(ts, "DAH")
