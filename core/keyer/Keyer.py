@@ -162,7 +162,7 @@ class Keyer(DeviceObserver):
 
         while not self._thread_stop:
 
-            self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
+            #self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
             sleep(self._space_time)
 
             sent = False
