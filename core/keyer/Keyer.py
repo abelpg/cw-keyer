@@ -33,8 +33,6 @@ class Keyer(DeviceObserver):
         self._thread_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
-        self._thread_pool = ThreadPoolExecutor(max_workers=20, thread_name_prefix="Keyer observers ThreadPool")
-
         self._started = False
 
     """
@@ -117,6 +115,11 @@ class Keyer(DeviceObserver):
         self._logger.info("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
         return dit_time, dah_time, space_time
 
+    def _print_time(self, time_init, action):
+        if self._logger.isEnabledFor(logging.DEBUG):
+            total_time = time() - time_init
+            total_time = round(total_time, 4)
+            self._logger.debug(f"SEND {action} took {total_time} seconds.")
 
     """
     Loop observes notify and wait dit time with space, finally release dit.
@@ -126,7 +129,7 @@ class Keyer(DeviceObserver):
 
         if len(self._observers) > 0:
             for observer in self._observers:
-                self._thread_pool.submit(observer.play_dit, self._dit_time, self._space_time)
+                observer.add_keyer_item(self._dit_time, self._space_time)
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
@@ -138,19 +141,13 @@ class Keyer(DeviceObserver):
         self._print_time(ts, "DIT")
 
 
-    def _print_time(self, time_init, action):
-        if self._logger.isEnabledFor(logging.DEBUG):
-            total_time = time() - time_init
-            total_time = round(total_time, 4)
-            self._logger.debug(f"SEND {action} took {total_time} seconds.")
-
     """
     Loop observes notify and wait dah time with space. Finally, release dah
     """
     def _send_dah(self):
         ts = time()
         for observer in self._observers:
-            self._thread_pool.submit(observer.play_dah, self._dah_time, self._space_time)
+            observer.add_keyer_item(self._dah_time, self._space_time)
 
         sleep(self._dah_time)
 
@@ -169,17 +166,10 @@ class Keyer(DeviceObserver):
         while not self._thread_stop:
 
             if no_sleep >= 20:
-                # self._logger.debug(
-                #     "Iambic loop: dit_pressed: {}, "
-                #     "dah_pressed: {}, "
-                #     "dit: {}, "
-                #     "dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
-
                 sleep(self._space_time)
                 no_sleep = 0
             else:
                 sleep(0.01)
-
 
             sent = False
             while self._dit_pressed or self._dah_pressed or self._dit or self._dah:

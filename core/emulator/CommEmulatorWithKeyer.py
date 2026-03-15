@@ -2,7 +2,7 @@ import logging
 
 from time import sleep
 from core.emulator.CommSerial import CommSerial
-from core.keyer import KeyerObserver
+from core.keyer import KeyerObserver, KeyerItem
 
 
 class CommEmulatorWithKeyer(KeyerObserver, CommSerial):
@@ -15,24 +15,20 @@ class CommEmulatorWithKeyer(KeyerObserver, CommSerial):
         self._serial = None
 
     """
-    Proxy method to translate the dit and dah events to keyboard events.
+    Proxy method to translate the dit and dah events to serial.
     """
-    def play_dah(self,time_dah:float, silence: float):
-        self._logger.debug("on dah")
+    def _process_item(self, keyer_item : KeyerItem):
+        self._logger.debug("Processing keyer item with time: " + str(keyer_item.time) + " and silence: " + str(keyer_item.silence))
         self._serial.dtr = True
-        sleep(time_dah)
+        sleep(keyer_item.time)
         self._serial.dtr = False
+        sleep(keyer_item.silence)
 
-        sleep(silence)
+    def start(self):
+        CommSerial.start(self)
+        KeyerObserver.start(self)
 
-    """
-    Proxy method to translate the dit and dah events to keyboard events.
-    """
-    def play_dit(self, time_dit: float, silence: float):
-        self._logger.debug("on dit")
-        self._serial.dtr = True
-        sleep(time_dit)
-        self._serial.dtr = False
-
-        sleep(silence)
+    def stop(self):
+        CommSerial.stop(self)
+        KeyerObserver.stop(self)
 
