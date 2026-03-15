@@ -26,7 +26,7 @@ class ToneGenerator:
                  sample_rate: int = 44100,
                  frames_per_buffer: int = 500,
                  frequency: int = 600,
-                 amplitude: float = 0.3,
+                 amplitude: float = 0.5,
                  output_device : AudioDevice = None):
         self._logger = logging.getLogger(__name__)
         # Init audio
@@ -50,48 +50,34 @@ class ToneGenerator:
     def _calculate_points_cycle(self):
         return int(self._sample_rate / self._frequency)
 
-    def _generate_tone_cycle(self):
-        range_n = self._calculate_points_cycle()
-        dt = 1.0 / self._sample_rate
-
-        # Calculate 1 cycle
-        cycle =  (self._amplitude * np.sin(2 * np.pi * self._frequency * n * dt) for n in range(range_n))
-        # Transform to bytes
-        data = b''.join(struct.pack('f', samp) for samp in cycle)
-        return data
-
     def _generate_tone(self, tone_duration: float):
         tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
         range_n = self._calculate_points_cycle()
+
         time_scale = self._frequency * 2 * np.pi /  self._sample_rate
 
-        total_points = tone_cycles * range_n
+        envelope_samples = int(self._sample_rate * tone_duration / 1000.0)
 
-        envelope_samples = int(total_points * 10.0 / 100.0)
-
+        tone_complete = []
 
         self._logger.debug("Generating tone with frequency: " + str(self._frequency)
                            + " Hz, duration: " + str(tone_duration)
                            + " seconds, which corresponds to "
                            + str(tone_cycles) + " cycles and envelope samples: " + str(envelope_samples))
-        tone_complete = []
-        current_point = 0
+
         for cyc in range(tone_cycles):
+            local_amplitude = self._amplitude
+            if cyc < envelope_samples:
+                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * cyc / envelope_samples)), 1.0)
+            elif cyc >= (tone_cycles - envelope_samples):
+                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * (tone_cycles - cyc) / envelope_samples)), 1.0)
+
             # Calculate 1 cycle
             data = []
-
             for n in range(range_n):
-                local_amplitude = self._amplitude
-                if current_point < envelope_samples:
-                    local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * cyc / envelope_samples)), 1.0)
-                elif current_point >= (total_points - envelope_samples):
-                    local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * (total_points - current_point) / envelope_samples)),
-                                                  1.0)
-
                 xn =  np.sin(n * time_scale)
                 data.append(struct.pack('f',  local_amplitude  * xn))
-                current_point += 1
-            # Append cycle
+
             tone_complete.append(b''.join(data))
 
         return tone_complete
