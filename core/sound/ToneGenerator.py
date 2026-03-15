@@ -23,9 +23,9 @@ class AudioDevice(BaseItem):
 class ToneGenerator:
 
     def __init__(self,
-                 sample_rate: int = 44100,
-                 frames_per_buffer: int = 500,
-                 frequency: int = 600,
+                 sample_rate: int = 44000,
+                 frames_per_buffer: int = 2000,
+                 frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
         self._logger = logging.getLogger(__name__)
