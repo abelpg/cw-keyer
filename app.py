@@ -11,7 +11,7 @@ except Exception:
     QApplication = None
 
 def main(args=None):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     __logger = logging.getLogger(__name__)
 
     if QtWidgets is None:

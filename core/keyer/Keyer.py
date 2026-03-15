@@ -160,22 +160,11 @@ class Keyer(DeviceObserver):
     """
     def _run_iambic(self):
 
-        no_sleep = 0
         while not self._thread_stop:
 
-            if no_sleep >= 20:
-                sleep(self._space_time)
-                no_sleep = 0
-            else:
-                sleep(0.01)
+            if self._dit or self._dit_pressed:
+                self._send_dit()
 
-            while self._dit_pressed or self._dah_pressed or self._dit or self._dah:
-
-                if self._dit or self._dit_pressed:
-                    self._send_dit()
-
-                if self._dah or self._dah_pressed:
-                    self._send_dah()
-
-            no_sleep += 1
+            if self._dah or self._dah_pressed:
+                self._send_dah()
 
