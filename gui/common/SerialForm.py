@@ -12,7 +12,6 @@ class SerialForm:
         self._logger = logging.getLogger(__name__)
 
         self.parent = parent
-        self._config = Configuration()
 
         self._class_name = class_name
 
@@ -36,7 +35,7 @@ class SerialForm:
 
     def _set_ports(self):
         if self._comm_emulator_port is not None:
-            config_port = self._config.get_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY)
+            config_port = Configuration.get_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY)
             index = 0
             found = False
             for port in CommSerial.list_ports():
@@ -51,6 +50,6 @@ class SerialForm:
 
     def _get_port(self):
         port = self._comm_emulator_port.currentData()
-        self._config.put_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY, port)
+        Configuration.put_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY, port)
         return port
 

@@ -19,8 +19,6 @@ class SoundForm:
 
         self._sound_processor = None
 
-        self._config = Configuration()
-
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
 
@@ -43,7 +41,7 @@ class SoundForm:
         layout_h.addWidget(self._device_list)
 
 
-        self._text_frequency = QtWidgets.QLineEdit(self._config.get_config(__name__,
+        self._text_frequency = QtWidgets.QLineEdit(Configuration.get_config(__name__,
                                                                      key=SoundForm.CONFIG_SOUND_FREQUENCY_KEY,
                                                                      default_value="600"))
         self._text_frequency.setMaximumWidth(50)
@@ -59,7 +57,7 @@ class SoundForm:
 
     def _set_devices(self):
 
-        device_config = self._config.get_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT)
+        device_config = Configuration.get_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT)
         index = 0
         found = False
 
@@ -84,7 +82,7 @@ class SoundForm:
     def _get_device(self):
         device = self._device_list.currentData()
         if device is not None:
-            self._config.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, str(device))
+            Configuration.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, str(device))
             for original_device in self._original_device_list:
                 if device == original_device.index:
                      return original_device
@@ -92,7 +90,7 @@ class SoundForm:
 
     def _get_frequency(self)    :
         frequency = self._text_frequency.text()
-        self._config.put_config(__name__, key=SoundForm.CONFIG_SOUND_FREQUENCY_KEY, value=frequency)
+        Configuration.put_config(__name__, key=SoundForm.CONFIG_SOUND_FREQUENCY_KEY, value=frequency)
         return int(frequency)
 
     def start(self):

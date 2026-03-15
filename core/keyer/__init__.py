@@ -1,7 +1,8 @@
 from .Keyer import Keyer
-from .KeyerObserver import KeyerObserver
+from .KeyerObserver import KeyerObserver, KeyerItem
 
 __all__ = [
-    "Keyer",
-    "KeyerObserver"
+    "KeyerItem",
+    "KeyerObserver",
+    "Keyer"
 ]
