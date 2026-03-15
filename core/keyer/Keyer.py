@@ -135,8 +135,15 @@ class Keyer(DeviceObserver):
 
         with self._thread_dit_lock:
             self._dit = False
-        self._logger.debug("SEND DIT {}s {}s".format(self._dit_time, time() - ts))
 
+        self._print_time(ts, "DIT")
+
+
+    def _print_time(self, time_init, action):
+        if self._logger.isEnabledFor(logging.DEBUG):
+            total_time = time() - time_init
+            total_time = round(total_time, 4)
+            self._logger.debug(f"SEND {action} took {total_time} seconds.")
 
     """
     Loop observes notify and wait dah time with space. Finally, release dah
@@ -150,8 +157,8 @@ class Keyer(DeviceObserver):
 
         with self._thread_dah_lock:
             self._dah = False
-        self._logger.debug("SEND DAH {}s {}s".format(self._dah_time, time() - ts))
 
+        self._print_time(ts, "DAH")
 
     """
     Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
@@ -159,11 +166,21 @@ class Keyer(DeviceObserver):
     """
     def _run_iambic(self):
 
-
+        no_sleep = 0
         while not self._thread_stop:
 
-            #self._logger.debug("Iambic loop: dit_pressed: {}, dah_pressed: {}, dit: {}, dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
-            sleep(self._space_time)
+            if no_sleep >= 20:
+                self._logger.debug(
+                    "Iambic loop: dit_pressed: {}, "
+                    "dah_pressed: {}, "
+                    "dit: {}, "
+                    "dah: {}".format(self._dit_pressed, self._dah_pressed, self._dit, self._dah))
+
+                sleep(self._space_time)
+                no_sleep = 0
+            else:
+                sleep(0.01)
+
 
             sent = False
             while self._dit_pressed or self._dah_pressed or self._dit or self._dah:
@@ -181,4 +198,6 @@ class Keyer(DeviceObserver):
                         sleep(self._space_time)
                     self._send_dah()
                     sent = True
+
+            no_sleep += 1
 
