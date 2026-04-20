@@ -89,7 +89,9 @@ class AppGui(QWidget):
             self._logger.debug("Keyboard keyer is not running, skipping stop.")
 
     def _device_started(self):
-        self._keyer_form.start()
+        self._logger.debug("Device started.")
+        self._comm_emulator_form.start()
+        # self._keyer_form.start()
 
     def _device_stopped(self):
         self._stop(True)

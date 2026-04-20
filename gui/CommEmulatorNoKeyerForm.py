@@ -42,5 +42,8 @@ class CommEmulatorNoKeyerForm(SerialForm):
         else:
             self._stop_comm_emulator()
 
+    def start(self):
+        self._start_comm_emulator()
+
     def stop(self):
         self._stop_comm_emulator()
