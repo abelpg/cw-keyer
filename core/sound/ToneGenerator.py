@@ -24,7 +24,7 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44000,
-                 frames_per_buffer: int = 50,
+                 frames_per_buffer: int = 100,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -39,49 +39,67 @@ class ToneGenerator:
 
         self._output_device = output_device
 
+        self._cache_audio_data = dict()
+        self._cache_silence_data = dict()
+
         self._audio_stream = None
-        self._silence_cycle = None
         self._started = False
 
     def _generate_silence(self, silence_duration: float):
-        t = np.linspace(0, silence_duration, int(self._sample_rate * silence_duration), endpoint=False)
-        waveform = 0*t
-        out = (waveform * 32767).astype(np.int16)
-        return out.tobytes()
+
+        data = self._cache_silence_data.get(silence_duration)
+
+        if data is None:
+
+            t = np.linspace(0, silence_duration, int(self._sample_rate * silence_duration), endpoint=False)
+            waveform = 0*t
+            out = (waveform * 32767).astype(np.int16)
+            data = out.tobytes()
+
+            self._cache_silence_data[silence_duration] = data
+
+        return data
 
     def _generate_soft_tone(self, tone_duration: float):
-        # Eje de tiempo
-        t = np.linspace(0, tone_duration, int(self._sample_rate * tone_duration), endpoint=False)
-        # Generar onda senoidal pura
-        # Formula: A * sin(2 * pi * f * t)
-        waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
+        data = self._cache_audio_data.get(tone_duration)
+        if data is None:
+            # Eje de tiempo
+            t = np.linspace(0, tone_duration, int(self._sample_rate * tone_duration), endpoint=False)
+            # Generar onda senoidal pura
+            # Formula: A * sin(2 * pi * f * t)
+            waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
 
-        # Definir tiempos de la envolvente (en segundos)
-        attack_t = 0.005  # Entrada suave
-        release_t = 0.01  # Salida larga
+            # Definir tiempos de la envolvente (en segundos)
+            attack_t = 0.003  # Entrada suave
+            release_t = 0.003  # Salida larga
 
-        # Convertir tiempos a número de muestras
-        att_samples = int(attack_t * self._sample_rate)
-        rel_samples = int(release_t * self._sample_rate)
-        sus_samples = len(waveform) - att_samples - rel_samples
+            # Convertir tiempos a número de muestras
+            att_samples = int(attack_t * self._sample_rate)
+            rel_samples = int(release_t * self._sample_rate)
+            sus_samples = len(waveform) - att_samples - rel_samples
 
-        # Crear la envolvente (0 -> 1 -> 1 -> 0)
-        envelope = np.concatenate([
-            np.linspace(0, 1, att_samples),  # Attack
-            np.ones(sus_samples),  # Sustain
-            np.linspace(1, 0, rel_samples)  # Release
-        ])
+            # Crear la envolvente (0 -> 1 -> 1 -> 0)
+            envelope = np.concatenate([
+                np.linspace(0, 1, att_samples),  # Attack
+                np.ones(sus_samples),  # Sustain
+                np.linspace(1, 0, rel_samples)  # Release
+            ])
 
-        # Aplicar envolvente al audio
-        soft_audio = waveform * envelope
+            # Aplicar envolvente al audio
+            soft_audio = waveform * envelope
 
-        # Guardar como archivo WAV de 16 bits
-        out = (soft_audio * 32767).astype(np.int16)
-        return out.tobytes()
+            # Guardar como archivo WAV de 16 bits
+            out = (soft_audio * 32767).astype(np.int16)
+            data = out.tobytes()
+            self._cache_audio_data[tone_duration] = data
+
+        return data
+
 
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
         if self._started:
+
 
             self._audio_stream.write(self._generate_soft_tone(tone_duration))
 
@@ -102,7 +120,6 @@ class ToneGenerator:
                                               output=True,
                                               output_device_index=self._output_device.index if self._output_device else None,
                                               frames_per_buffer=self._frames_per_buffer)
-
 
         self._started = True
 
