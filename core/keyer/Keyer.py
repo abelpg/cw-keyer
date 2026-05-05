@@ -160,7 +160,7 @@ class Keyer(DeviceObserver):
                     elif self._dit_pressed:
                         self._queue_dit = True
 
-            elif self._queue_dah:
+            if self._queue_dah:
                 with self._thread_lock:
                     if self._dit_pressed:
                         self._queue_dit = True

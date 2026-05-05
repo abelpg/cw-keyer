@@ -39,69 +39,54 @@ class ToneGenerator:
 
         self._output_device = output_device
 
-        self._omega = float(self._frequency) * (np.pi * 2.0) / float(self._sample_rate)
-
         self._audio_stream = None
         self._silence_cycle = None
         self._started = False
 
+    def _generate_silence(self, silence_duration: float):
+        t = np.linspace(0, silence_duration, int(self._sample_rate * silence_duration), endpoint=False)
+        waveform = 0*t
+        out = (waveform * 32767).astype(np.int16)
+        return out.tobytes()
 
+    def _generate_soft_tone(self, tone_duration: float):
+        # Eje de tiempo
+        t = np.linspace(0, tone_duration, int(self._sample_rate * tone_duration), endpoint=False)
+        # Generar onda senoidal pura
+        # Formula: A * sin(2 * pi * f * t)
+        waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
 
-    def _calculate_points_cycle(self):
-        return int(self._sample_rate / self._frequency)
+        # Definir tiempos de la envolvente (en segundos)
+        attack_t = 0.005  # Entrada suave
+        release_t = 0.01  # Salida larga
 
-    def _generate_tone(self, tone_duration: float):
-        tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
-        range_n = self._calculate_points_cycle()
+        # Convertir tiempos a número de muestras
+        att_samples = int(attack_t * self._sample_rate)
+        rel_samples = int(release_t * self._sample_rate)
+        sus_samples = len(waveform) - att_samples - rel_samples
 
-        envelope_samples = int(self._sample_rate * tone_duration / 800.0)
+        # Crear la envolvente (0 -> 1 -> 1 -> 0)
+        envelope = np.concatenate([
+            np.linspace(0, 1, att_samples),  # Attack
+            np.ones(sus_samples),  # Sustain
+            np.linspace(1, 0, rel_samples)  # Release
+        ])
 
-        tone_complete = []
+        # Aplicar envolvente al audio
+        soft_audio = waveform * envelope
 
-        self._logger.debug("Generating tone with frequency: " + str(self._frequency)
-                           + " amplitude: " + str(self._amplitude)
-                           + " Hz, duration: " + str(tone_duration)
-                           + " seconds, which corresponds to "
-                           + str(tone_cycles) + " cycles and envelope samples: " + str(envelope_samples))
+        # Guardar como archivo WAV de 16 bits
+        out = (soft_audio * 32767).astype(np.int16)
+        return out.tobytes()
 
-        for cyc in range(tone_cycles):
-            local_amplitude = self._amplitude
-            if cyc < envelope_samples:
-                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * cyc / envelope_samples)), 1.0)
-            elif cyc >= (tone_cycles - envelope_samples):
-                local_amplitude *= np.minimum(0.5 - (0.5 * np.cos(np.pi * (tone_cycles - cyc) / envelope_samples)), 1.0)
-
-            # Calculate 1 cycle
-            data = []
-            for n in range(range_n):
-                xn =  np.sin(n * self._omega)
-                data.append(struct.pack('f',  local_amplitude  * xn))
-
-            tone_complete.append(b''.join(data))
-
-        return tone_complete
-
-
-    def _generate_silence_cycle(self):
-        range_n = self._calculate_points_cycle()
-        # Calculate 1 cycle
-        data = []
-        for n in range(range_n):
-            data.append(struct.pack('f', 0))
-        # Transform to bytes
-        return b''.join(data)
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
         if self._started:
 
-            tone_data = self._generate_tone(tone_duration)
-            for data in tone_data:
-                self._audio_stream.write(data)
+            self._audio_stream.write(self._generate_soft_tone(tone_duration))
 
-            if silence_duration > 0:
-                silence_cycles = int(self._frequency * silence_duration /2.0)
-                for n in range(silence_cycles):
-                    self._audio_stream.write(self._silence_cycle)
+            self._audio_stream.write(self._generate_silence(silence_duration))
+
         else:
             self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
@@ -111,14 +96,14 @@ class ToneGenerator:
                           + " amplitude: " + str(self._amplitude)
                           +" sample rate and  output " + str(self._output_device))
 
-        self._audio_stream = self._audio.open(format=pyaudio.paFloat32,
+        self._audio_stream = self._audio.open(format=pyaudio.paInt16,
                                               rate=self._sample_rate,
                                               channels=1,
                                               output=True,
                                               output_device_index=self._output_device.index if self._output_device else None,
                                               frames_per_buffer=self._frames_per_buffer)
 
-        self._silence_cycle = self._generate_silence_cycle()
+
         self._started = True
 
     def stop(self):
