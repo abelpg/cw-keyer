@@ -134,7 +134,7 @@ class ToneGenerator:
         output_devices = []
         for i in range(audio.get_device_count()):
             device_info = audio.get_device_info_by_index(i)
-            if device_info.get('maxOutputChannels') > 0:
+            if device_info.get('maxOutputChannels') > 0 and device_info.get('hostApi') == 0:
                 output_devices.append(AudioDevice(device_info))
         audio.terminate()
         output_devices.sort()

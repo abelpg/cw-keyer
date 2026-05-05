@@ -9,7 +9,7 @@ from core.sound import SoundProcessor, ToneGenerator
 class SoundForm:
 
     CONFIG_SOUND_FREQUENCY_KEY = "sound_frequency"
-    CONFIG_SOUND_DEVICE_OUTPUT = "sound_device_output"
+    CONFIG_SOUND_DEVICE_OUTPUT = "sound_device_name_output"
 
     def __init__(self, parent: QtWidgets.QBoxLayout, callback_attach_device_observer, callback_detach_device_observer):
         self._logger = logging.getLogger(__name__)
@@ -34,8 +34,7 @@ class SoundForm:
         label.setMaximumWidth(100)
         layout_h.addWidget(label)
 
-        self._logger.info(str( ToneGenerator.get_available_output_devices()))
-        self._original_device_list = ToneGenerator.get_available_output_devices()
+        self._original_device_list = []
         self._device_list = QtWidgets.QComboBox()
         self._set_devices()
         layout_h.addWidget(self._device_list)
@@ -55,16 +54,23 @@ class SoundForm:
         widget.setLayout(layout)
         parent.addWidget(widget)
 
+
+
+
     def _set_devices(self):
+        self._original_device_list = ToneGenerator.get_available_output_devices()
+
+        for device in self._original_device_list:
+            self._logger.info(f"Device: {device}, index: {device.index}")
 
         device_config = Configuration.get_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT)
         index = 0
         found = False
 
         for device in self._original_device_list:
-            device_index = device.index
-            self._device_list.addItem(str(device), device_index)
-            if device_config is not None and device_index == int(device_config) and not found:
+            device_name = device.name
+            self._device_list.addItem(str(device), device_name)
+            if device_config is not None and device_name == device_config and not found:
                 found = True
             elif not found:
                 index += 1
@@ -82,9 +88,9 @@ class SoundForm:
     def _get_device(self):
         device = self._device_list.currentData()
         if device is not None:
-            Configuration.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, str(device))
+            Configuration.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, device)
             for original_device in self._original_device_list:
-                if device == original_device.index:
+                if device == original_device.name:
                      return original_device
         return None
 
