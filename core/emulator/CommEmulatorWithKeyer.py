@@ -7,7 +7,7 @@ from core.keyer import KeyerObserver, KeyerItem
 
 class CommEmulatorWithKeyer(KeyerObserver, CommSerial):
 
-    def __init__(self, port: str = 'COM4', baud_rate: int = 9600):
+    def __init__(self, port: str = 'COM4', baud_rate: int = 115200):
         KeyerObserver.__init__(self)
         CommSerial.__init__(self, port=port, baud_rate=baud_rate, rts_cts=True)
 
