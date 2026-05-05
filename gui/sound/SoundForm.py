@@ -9,6 +9,7 @@ from core.sound import SoundProcessor, ToneGenerator
 class SoundForm:
 
     CONFIG_SOUND_FREQUENCY_KEY = "sound_frequency"
+    CONFIG_SOUND_AMPLITUDE_KEY = "sound_amplitude"
     CONFIG_SOUND_DEVICE_OUTPUT = "sound_device_name_output"
 
     def __init__(self, parent: QtWidgets.QBoxLayout, callback_attach_device_observer, callback_detach_device_observer):
@@ -31,7 +32,7 @@ class SoundForm:
         layout_h = QtWidgets.QHBoxLayout()
 
         label = QtWidgets.QLabel("Sound Frequency:")
-        label.setMaximumWidth(100)
+        label.setMaximumWidth(80)
         layout_h.addWidget(label)
 
         self._original_device_list = []
@@ -46,6 +47,12 @@ class SoundForm:
         self._text_frequency.setMaximumWidth(50)
 
         layout_h.addWidget(self._text_frequency)
+
+        self._text_amplitude = QtWidgets.QLineEdit(Configuration.get_config(__name__,
+                                                                            key=SoundForm.CONFIG_SOUND_AMPLITUDE_KEY,
+                                                                            default_value="0.5"))
+        self._text_amplitude.setMaximumWidth(50)
+        layout_h.addWidget(self._text_amplitude)
 
         widget_h.setLayout(layout_h)
         layout.addWidget(widget_h)
@@ -99,9 +106,14 @@ class SoundForm:
         Configuration.put_config(__name__, key=SoundForm.CONFIG_SOUND_FREQUENCY_KEY, value=frequency)
         return int(frequency)
 
+    def _get_amplitude(self)    :
+        amplitude = self._text_amplitude.text()
+        Configuration.put_config(__name__, key=SoundForm.CONFIG_SOUND_AMPLITUDE_KEY, value=amplitude)
+        return float(amplitude)
+
     def start(self):
         if self._sound_processor is None:
-            self._sound_processor = SoundProcessor(frequency=self._get_frequency(), output_device=self._get_device())
+            self._sound_processor = SoundProcessor(frequency=self._get_frequency(),  amplitude=self._get_amplitude(), output_device=self._get_device())
             self._sound_processor.start()
             self._callback_attach_device_observer(self._sound_processor)
 

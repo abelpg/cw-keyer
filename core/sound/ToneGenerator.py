@@ -24,7 +24,7 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44000,
-                 frames_per_buffer: int = 10,
+                 frames_per_buffer: int = 50,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -54,11 +54,12 @@ class ToneGenerator:
         tone_cycles = int(self._frequency * tone_duration)  # repeat for T cycles
         range_n = self._calculate_points_cycle()
 
-        envelope_samples = int(self._sample_rate * tone_duration / 1000.0)
+        envelope_samples = int(self._sample_rate * tone_duration / 800.0)
 
         tone_complete = []
 
         self._logger.debug("Generating tone with frequency: " + str(self._frequency)
+                           + " amplitude: " + str(self._amplitude)
                            + " Hz, duration: " + str(tone_duration)
                            + " seconds, which corresponds to "
                            + str(tone_cycles) + " cycles and envelope samples: " + str(envelope_samples))
@@ -106,7 +107,9 @@ class ToneGenerator:
 
     def start(self):
 
-        self._logger.info("ToneGenerator is started " +str(self._sample_rate) +" sample rate and  output " + str(self._output_device))
+        self._logger.info("ToneGenerator is started " +str(self._sample_rate)
+                          + " amplitude: " + str(self._amplitude)
+                          +" sample rate and  output " + str(self._output_device))
 
         self._audio_stream = self._audio.open(format=pyaudio.paFloat32,
                                               rate=self._sample_rate,
