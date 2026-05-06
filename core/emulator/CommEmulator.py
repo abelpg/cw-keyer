@@ -10,7 +10,7 @@ from core.emulator.CommSerial import CommSerial
 
 class CommEmulator(DeviceObserver, CommSerial):
 
-    def __init__(self, port: str = 'COM4', baud_rate: int = 9600):
+    def __init__(self, port: str = 'COM3', baud_rate: int = 115200 ):
         DeviceObserver.__init__(self)
         CommSerial.__init__(self, port=port, baud_rate=baud_rate, rts_cts=False)
 

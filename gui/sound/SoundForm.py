@@ -9,7 +9,8 @@ from core.sound import SoundProcessor, ToneGenerator
 class SoundForm:
 
     CONFIG_SOUND_FREQUENCY_KEY = "sound_frequency"
-    CONFIG_SOUND_DEVICE_OUTPUT = "sound_device_output"
+    CONFIG_SOUND_AMPLITUDE_KEY = "sound_amplitude"
+    CONFIG_SOUND_DEVICE_OUTPUT = "sound_device_name_output"
 
     def __init__(self, parent: QtWidgets.QBoxLayout, callback_attach_device_observer, callback_detach_device_observer):
         self._logger = logging.getLogger(__name__)
@@ -31,11 +32,10 @@ class SoundForm:
         layout_h = QtWidgets.QHBoxLayout()
 
         label = QtWidgets.QLabel("Sound Frequency:")
-        label.setMaximumWidth(100)
+        label.setMaximumWidth(80)
         layout_h.addWidget(label)
 
-        self._logger.info(str( ToneGenerator.get_available_output_devices()))
-        self._original_device_list = ToneGenerator.get_available_output_devices()
+        self._original_device_list = []
         self._device_list = QtWidgets.QComboBox()
         self._set_devices()
         layout_h.addWidget(self._device_list)
@@ -48,6 +48,12 @@ class SoundForm:
 
         layout_h.addWidget(self._text_frequency)
 
+        self._text_amplitude = QtWidgets.QLineEdit(Configuration.get_config(__name__,
+                                                                            key=SoundForm.CONFIG_SOUND_AMPLITUDE_KEY,
+                                                                            default_value="0.5"))
+        self._text_amplitude.setMaximumWidth(50)
+        layout_h.addWidget(self._text_amplitude)
+
         widget_h.setLayout(layout_h)
         layout.addWidget(widget_h)
         ##################
@@ -55,16 +61,23 @@ class SoundForm:
         widget.setLayout(layout)
         parent.addWidget(widget)
 
+
+
+
     def _set_devices(self):
+        self._original_device_list = ToneGenerator.get_available_output_devices()
+
+        for device in self._original_device_list:
+            self._logger.info(f"Device: {device}, index: {device.index}")
 
         device_config = Configuration.get_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT)
         index = 0
         found = False
 
         for device in self._original_device_list:
-            device_index = device.index
-            self._device_list.addItem(str(device), device_index)
-            if device_config is not None and device_index == int(device_config) and not found:
+            device_name = device.name
+            self._device_list.addItem(str(device), device_name)
+            if device_config is not None and device_name == device_config and not found:
                 found = True
             elif not found:
                 index += 1
@@ -82,9 +95,9 @@ class SoundForm:
     def _get_device(self):
         device = self._device_list.currentData()
         if device is not None:
-            Configuration.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, str(device))
+            Configuration.put_config(__name__, SoundForm.CONFIG_SOUND_DEVICE_OUTPUT, device)
             for original_device in self._original_device_list:
-                if device == original_device.index:
+                if device == original_device.name:
                      return original_device
         return None
 
@@ -93,9 +106,14 @@ class SoundForm:
         Configuration.put_config(__name__, key=SoundForm.CONFIG_SOUND_FREQUENCY_KEY, value=frequency)
         return int(frequency)
 
+    def _get_amplitude(self)    :
+        amplitude = self._text_amplitude.text()
+        Configuration.put_config(__name__, key=SoundForm.CONFIG_SOUND_AMPLITUDE_KEY, value=amplitude)
+        return float(amplitude)
+
     def start(self):
         if self._sound_processor is None:
-            self._sound_processor = SoundProcessor(frequency=self._get_frequency(), output_device=self._get_device())
+            self._sound_processor = SoundProcessor(frequency=self._get_frequency(),  amplitude=self._get_amplitude(), output_device=self._get_device())
             self._sound_processor.start()
             self._callback_attach_device_observer(self._sound_processor)
 

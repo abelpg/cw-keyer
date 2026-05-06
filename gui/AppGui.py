@@ -90,8 +90,8 @@ class AppGui(QWidget):
 
     def _device_started(self):
         self._logger.debug("Device started.")
-        self._comm_emulator_form.start()
-        # self._keyer_form.start()
+        #self._comm_emulator_form.start()
+        self._keyer_form.start()
 
     def _device_stopped(self):
         self._stop(True)

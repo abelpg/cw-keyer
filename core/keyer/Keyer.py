@@ -20,8 +20,6 @@ class Keyer(DeviceObserver):
         # State machine init. dit dah
         self._dit_pressed = False
         self._dah_pressed = False
-        self._dit = False
-        self._dah = False
 
         # wmp
         self._dit_time, self._dah_time, self._space_time = self._calculate(wpm)
@@ -30,57 +28,41 @@ class Keyer(DeviceObserver):
         self._thread = threading.Thread(target=self._run_iambic, daemon=True)
         self._thread_stop = False
 
+
         # Locks to prevent concurrent modification
         self._thread_lock = threading.Lock()
 
         self._observers: List[KeyerObserver] = []
         self._started = False
 
-        self._last_dit_pressed = None
-        self._last_dah_pressed = None
+        self._queue_dit = False
+        self._queue_dah = False
 
 
-    def _wait_for_release(self,last_time_pressed):
-        time_release = self._dit_time + 0.01 - (time() - last_time_pressed)
-        if time_release > 0:
-            self._logger.debug("Waiting for release for {} seconds".format(time_release))
-            sleep(time_release)
 
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
     def on_dah(self, pressed: bool):
         self._check_started()
-        self._logger.debug("On dah in" +str(pressed))
         if pressed:
-            self._last_dah_pressed = time()
             self._dah_pressed = True
-            if not self._dah:
-                with self._thread_lock:
-                    self._dah = True
+            with self._thread_lock:
+                self._queue_dah = True
         else:
-            self._wait_for_release(self._last_dah_pressed)
             self._dah_pressed = False
-        self._logger.debug("On dah out" +str(pressed))
-
 
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
     """
     def on_dit(self, pressed: bool):
-        self._check_started()
-        self._logger.debug("On dit in " +str(pressed))
         if pressed:
-            self._last_dit_pressed = time()
             self._dit_pressed = True
-            if not self._dit:
-                with self._thread_lock:
-                    self._dit = True
+            with self._thread_lock:
+                self._queue_dit = True
         else:
-            self._wait_for_release(self._last_dit_pressed )
             self._dit_pressed = False
-        self._logger.debug("On dit out "+str(pressed))
 
     """
     Add observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
@@ -140,36 +122,26 @@ class Keyer(DeviceObserver):
     Loop observes notify and wait dit time with space, finally release dit.
     """
     def _send_dit(self) :
-        ts = time()
-
         if len(self._observers) > 0:
             for observer in self._observers:
                 observer.add_keyer_item(self._dit_time, self._space_time)
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dit_time + self._space_time)
-
-        with self._thread_lock:
-            self._dit = False
-
-        self._print_time(ts, "DIT")
-
+        sleep(self._dit_time + self._dit_time)
 
     """
     Loop observes notify and wait dah time with space. Finally, release dah
     """
     def _send_dah(self):
-        ts = time()
-        for observer in self._observers:
-            observer.add_keyer_item(self._dah_time, self._space_time)
+        if len(self._observers) > 0:
+            for observer in self._observers:
+                observer.add_keyer_item(self._dah_time, self._space_time)
+        else:
+            self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dah_time + self._space_time)
+        sleep(self._dah_time + self._dit_time)
 
-        with self._thread_lock:
-            self._dah = False
-
-        self._print_time(ts, "DAH")
 
     """
     Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
@@ -179,9 +151,38 @@ class Keyer(DeviceObserver):
 
         while not self._thread_stop:
 
-            if self._dit or self._dit_pressed:
+            if self._queue_dit:
+                # When dah is pressed when start dit
+                with self._thread_lock:
+                    if self._dah_pressed:
+                        self._queue_dah = True
+
                 self._send_dit()
 
-            if self._dah or self._dah_pressed:
+                # Enqueue next.
+                with self._thread_lock:
+                    self._queue_dit = False
+                    if self._dah_pressed:
+                        self._queue_dah = True
+                    elif self._dit_pressed:
+                        self._queue_dit = True
+
+            if self._queue_dah:
+
+                # When dit is pressed when start dah
+                with self._thread_lock:
+                    if self._dit_pressed:
+                        self._queue_dit = True
+
                 self._send_dah()
+
+                # Enqueue next.
+                with self._thread_lock:
+                    self._queue_dah = False
+                    if self._dit_pressed:
+                        self._queue_dit = True
+                    elif self._dah_pressed:
+                        self._queue_dah = True
+
+
 
