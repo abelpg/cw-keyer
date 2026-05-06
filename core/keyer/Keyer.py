@@ -152,7 +152,14 @@ class Keyer(DeviceObserver):
         while not self._thread_stop:
 
             if self._queue_dit:
+                # When dah is pressed when start dit
+                with self._thread_lock:
+                    if self._dah_pressed:
+                        self._queue_dah = True
+
                 self._send_dit()
+
+                # Enqueue next.
                 with self._thread_lock:
                     self._queue_dit = False
                     if self._dah_pressed:
@@ -161,12 +168,15 @@ class Keyer(DeviceObserver):
                         self._queue_dit = True
 
             if self._queue_dah:
+
+                # When dit is pressed when start dah
                 with self._thread_lock:
                     if self._dit_pressed:
                         self._queue_dit = True
 
                 self._send_dah()
 
+                # Enqueue next.
                 with self._thread_lock:
                     self._queue_dah = False
                     if self._dit_pressed:

@@ -50,7 +50,7 @@ class ToneGenerator:
         data = self._cache_silence_data.get(silence_duration)
 
         if data is None:
-
+            self._logger.info("Generate silence " + str(silence_duration))
             t = np.linspace(0, silence_duration, int(self._sample_rate * silence_duration), endpoint=False)
             waveform = 0*t
             out = (waveform * 32767).astype(np.int16)
@@ -63,6 +63,7 @@ class ToneGenerator:
     def _generate_soft_tone(self, tone_duration: float):
         data = self._cache_audio_data.get(tone_duration)
         if data is None:
+            self._logger.info("Generate tone " +str(tone_duration))
             # Eje de tiempo
             t = np.linspace(0, tone_duration, int(self._sample_rate * tone_duration), endpoint=False)
             # Generar onda senoidal pura
@@ -99,10 +100,7 @@ class ToneGenerator:
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
         if self._started:
-
-
             self._audio_stream.write(self._generate_soft_tone(tone_duration))
-
             self._audio_stream.write(self._generate_silence(silence_duration))
 
         else:
@@ -120,7 +118,7 @@ class ToneGenerator:
                                               output=True,
                                               output_device_index=self._output_device.index if self._output_device else None,
                                               frames_per_buffer=self._frames_per_buffer)
-
+        self._cache_silence_data.clear()
         self._started = True
 
     def stop(self):
