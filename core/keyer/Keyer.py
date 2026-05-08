@@ -2,8 +2,7 @@ import logging
 import threading
 from time import time
 
-from typing import List
-from core.keyer import KeyerObserver,AudioDevice, ToneGenerator
+from core.keyer import AudioDevice, ToneGenerator
 from core.device import DeviceObserver
 
 
@@ -12,7 +11,8 @@ class Keyer(DeviceObserver):
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
 
-    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None):
+    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None,
+                 call_back_on_serial = None, call_back_off_serial = None):
         self._logger = logging.getLogger(__name__)
 
         # State machine init. dit dah
@@ -31,16 +31,16 @@ class Keyer(DeviceObserver):
         self._thread = threading.Thread(target=self._run_iambic, daemon=True)
         self._thread_stop = False
 
-
         # Locks to prevent concurrent modification
         self._thread_lock = threading.Lock()
-
-        self._observers: List[KeyerObserver] = []
         self._started = False
 
         self._queue_dit = False
         self._queue_dah = False
 
+        # callbacks serial
+        self._call_back_on_serial = call_back_on_serial
+        self._call_back_off_serial = call_back_off_serial
 
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
@@ -66,18 +66,6 @@ class Keyer(DeviceObserver):
         else:
             self._dit_pressed = False
 
-    """
-    Add observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
-    """
-    def attach_observer(self, observer: KeyerObserver):
-        self._observers.append(observer)
-
-    """
-    Remove observer to keyer, this observer will be called when the dit or dah is pressed or released with calculated time. 
-    """
-    def detach_observer(self, observer: KeyerObserver):
-        self._observers.remove(observer)
-
     def start(self):
         self._thread.start()
         self._tone_generator = ToneGenerator(frequency=self._frequency,
@@ -90,6 +78,14 @@ class Keyer(DeviceObserver):
         self._tone_generator.stop()
         self._thread_stop = True
         self._started = False
+
+    def _call_on_serial(self):
+        if self._call_back_on_serial is not None:
+            self._call_back_on_serial()
+
+    def _call_off_serial(self):
+        if self._call_back_off_serial is not None:
+            self._call_back_off_serial()
 
     def _check_started(self):
         if not self._started:
@@ -130,13 +126,11 @@ class Keyer(DeviceObserver):
     """
     def _send_dit(self) :
         timer = time()
-        if len(self._observers) > 0:
-            for observer in self._observers:
-                observer.add_keyer_item(self._dit_time, self._space_time)
-        else:
-            self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
+        self._call_on_serial()
         self._tone_generator.play_tone(self._dit_time, self._space_time)
+        self._call_off_serial()
+
         self._print_time(timer, "dit")
 
 
@@ -145,14 +139,13 @@ class Keyer(DeviceObserver):
     """
     def _send_dah(self):
         timer = time()
-        if len(self._observers) > 0:
-            for observer in self._observers:
-                observer.add_keyer_item(self._dah_time, self._space_time)
-        else:
-            self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
+        self._call_on_serial()
         self._tone_generator.play_tone(self._dah_time, self._space_time)
+        self._call_off_serial()
+
         self._print_time(timer, "dah")
+
 
     """
     Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
