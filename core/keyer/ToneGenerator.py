@@ -1,5 +1,6 @@
 import logging
-import struct
+from time import sleep, time
+
 import pyaudio
 import numpy as np
 
@@ -52,8 +53,7 @@ class ToneGenerator:
         if data is None:
             self._logger.info("Generate silence " + str(silence_duration))
             t = np.linspace(0, silence_duration, int(self._sample_rate * silence_duration), endpoint=False)
-            waveform = 0*t
-            out = (waveform * 32767).astype(np.int16)
+            out = (t * 0).astype(np.int16)
             data = out.tobytes()
 
             self._cache_silence_data[silence_duration] = data
@@ -72,7 +72,7 @@ class ToneGenerator:
 
             # Definir tiempos de la envolvente (en segundos)
             attack_t = 0.003  # Entrada suave
-            release_t = 0.003  # Salida larga
+            release_t = 0.005  # Salida larga
 
             # Convertir tiempos a número de muestras
             att_samples = int(attack_t * self._sample_rate)
@@ -100,8 +100,14 @@ class ToneGenerator:
 
     def play_tone(self, tone_duration: float, silence_duration: float = 0):
         if self._started:
+            timer = time()
             self._audio_stream.write(self._generate_soft_tone(tone_duration))
             self._audio_stream.write(self._generate_silence(silence_duration))
+            duration = time() - timer
+
+            sleep_time =  (tone_duration + silence_duration) - duration
+            sleep(sleep_time)
+            self._logger.debug("Sleep1 " + str(sleep_time) )
 
         else:
             self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")

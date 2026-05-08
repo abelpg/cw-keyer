@@ -1,11 +1,9 @@
 import logging
 import threading
-from asyncio import timeout_at
-from concurrent.futures import ThreadPoolExecutor
-from time import sleep, time
+from time import time
 
 from typing import List
-from core.keyer import KeyerObserver
+from core.keyer import KeyerObserver,AudioDevice, ToneGenerator
 from core.device import DeviceObserver
 
 
@@ -14,7 +12,7 @@ class Keyer(DeviceObserver):
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
 
-    def __init__(self, wpm : int):
+    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None):
         self._logger = logging.getLogger(__name__)
 
         # State machine init. dit dah
@@ -23,6 +21,11 @@ class Keyer(DeviceObserver):
 
         # wmp
         self._dit_time, self._dah_time, self._space_time = self._calculate(wpm)
+
+        self._tone_generator = None
+        self._frequency = frequency
+        self._amplitude = amplitude
+        self._output_device = output_device
 
         # Principal thread to tak tics from dit and dah
         self._thread = threading.Thread(target=self._run_iambic, daemon=True)
@@ -37,7 +40,6 @@ class Keyer(DeviceObserver):
 
         self._queue_dit = False
         self._queue_dah = False
-
 
 
     """
@@ -78,9 +80,14 @@ class Keyer(DeviceObserver):
 
     def start(self):
         self._thread.start()
+        self._tone_generator = ToneGenerator(frequency=self._frequency,
+                                             amplitude=self._amplitude,
+                                             output_device=self._output_device)
+        self._tone_generator.start()
         self._started = True
 
     def stop(self):
+        self._tone_generator.stop()
         self._thread_stop = True
         self._started = False
 
@@ -122,26 +129,30 @@ class Keyer(DeviceObserver):
     Loop observes notify and wait dit time with space, finally release dit.
     """
     def _send_dit(self) :
+        timer = time()
         if len(self._observers) > 0:
             for observer in self._observers:
                 observer.add_keyer_item(self._dit_time, self._space_time)
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dit_time + self._dit_time)
+        self._tone_generator.play_tone(self._dit_time, self._space_time)
+        self._print_time(timer, "dit")
+
 
     """
     Loop observes notify and wait dah time with space. Finally, release dah
     """
     def _send_dah(self):
+        timer = time()
         if len(self._observers) > 0:
             for observer in self._observers:
                 observer.add_keyer_item(self._dah_time, self._space_time)
         else:
             self._logger.warning("No observers attached to keyer, skipping dit signal.")
 
-        sleep(self._dah_time + self._dit_time)
-
+        self._tone_generator.play_tone(self._dah_time, self._space_time)
+        self._print_time(timer, "dah")
 
     """
     Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
