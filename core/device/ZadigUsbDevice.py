@@ -14,7 +14,8 @@ This class represents a USB device that is used to control the keyer. It uses th
 class HidDeviceItem(BaseItem):
 
     TESTED_DEVICES = [
-        {"vendor_id": 0x413d, "product_id": 0x2107, "interface": 1, "endpoint": 0x82, "max_packet_size": 4}
+        {"vendor_id": 0x413d, "product_id": 0x2107, "interface": 0, "endpoint": 0x81, "max_packet_size": 8}, # Vail
+        {"vendor_id": 0x413d, "product_id": 0x2107, "interface": 1, "endpoint": 0x82, "max_packet_size": 4}  # Left click/right
     ]
 
 
@@ -149,11 +150,12 @@ class ZadigUsbDevice(Device):
             while not self._stop:
                 try:
                     data = self._device.read(self._endpoint,self._max_packet_size)
-                    if data[0] == self.CLICK_BOTH:
+                    #self._logger.debug("Received data from USB device." + str(data))
+                    if data[0] == self.CLICK_BOTH or (data[2] > 0 and data[3] > 0):
                         self._set_dit_dah( True,True)
-                    elif data[0] == self.CLICK_LEFT:
+                    elif data[0] == self.CLICK_LEFT or data[2] > 0 :
                         self._set_dit_dah( True,False)
-                    elif data[0] == self.CLICK_RIGHT:
+                    elif data[0] == self.CLICK_RIGHT or data[3] > 0:
                         self._set_dit_dah(False,True)
                     else:
                         self._set_dit_dah(False, False)
