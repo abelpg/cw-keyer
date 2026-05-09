@@ -19,11 +19,11 @@ class KeyboardDevice(Device):
 
     @staticmethod
     def _is_key_dit(key):
-        return key == Key.ctrl_r or (key.vk and key.vk == 186)
+        return key == Key.ctrl_r or (hasattr(key, 'vk') and key.vk == 186)
 
     @staticmethod
     def _is_key_dah(key):
-        return key == Key.ctrl_l or (key.vk and key.vk == 187)
+        return key == Key.ctrl_l or (hasattr(key, 'vk') and key.vk == 187)
 
     def _on_press_key(self, key):
         self._logger.debug("Key pressed: " + str(key))
