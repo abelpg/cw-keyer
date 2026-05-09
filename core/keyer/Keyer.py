@@ -33,7 +33,6 @@ class Keyer(DeviceObserver):
         self._thread_stop = False
 
         # Locks to prevent concurrent modification
-        self._thread_lock = threading.Lock()
         self._started = False
 
         self._queue_dit = False
@@ -49,8 +48,7 @@ class Keyer(DeviceObserver):
         self._check_started()
         if pressed:
             self._dah_pressed = True
-            with self._thread_lock:
-                self._queue_dah = True
+            self._queue_dah = True
         else:
             self._dah_pressed = False
 
@@ -61,8 +59,8 @@ class Keyer(DeviceObserver):
     def on_dit(self, pressed: bool):
         if pressed:
             self._dit_pressed = True
-            with self._thread_lock:
-                self._queue_dit = True
+            self._queue_dit = True
+
         else:
             self._dit_pressed = False
 
@@ -144,6 +142,8 @@ class Keyer(DeviceObserver):
 
         self._call_serial(self._dit_time)
         self._tone_generator.play_tone(self._dit_time, self._space_time)
+        sleep(self._dit_time + self._space_time)
+        self._queue_dit = False
 
         self._print_time(self._last_send, "dit")
 
@@ -156,6 +156,8 @@ class Keyer(DeviceObserver):
 
         self._call_serial(self._dah_time)
         self._tone_generator.play_tone(self._dah_time, self._space_time)
+        sleep(self._dah_time + self._space_time)
+        self._queue_dah = False
 
         self._print_time(self._last_send, "dah")
 
@@ -172,37 +174,30 @@ class Keyer(DeviceObserver):
 
             if self._queue_dit:
                 # When dah is pressed when start dit
-                with self._thread_lock:
-                    if self._dah_pressed:
-                        self._queue_dah = True
+
+                if self._dah_pressed:
+                    self._queue_dah = True
 
                 self._send_dit()
 
-                # Enqueue next.
-                with self._thread_lock:
-                    self._queue_dit = False
-                    if self._dah_pressed:
-                        self._queue_dah = True
-                    elif self._dit_pressed:
-                        self._queue_dit = True
+                if self._dah_pressed:
+                    self._queue_dah = True
+                elif self._dit_pressed:
+                    self._queue_dit = True
 
             # not elif because enqueue last.
             if self._queue_dah:
 
                 # When dit is pressed when start dah
-                with self._thread_lock:
-                    if self._dit_pressed:
-                        self._queue_dit = True
+                if self._dit_pressed:
+                    self._queue_dit = True
 
                 self._send_dah()
 
-                # Enqueue next.
-                with self._thread_lock:
-                    self._queue_dah = False
-                    if self._dit_pressed:
-                        self._queue_dit = True
-                    elif self._dah_pressed:
-                        self._queue_dah = True
+                if self._dit_pressed:
+                    self._queue_dit = True
+                elif self._dah_pressed:
+                    self._queue_dah = True
 
             # Sleep to avoid high CPU usage when no signal is being sent. If the last send was more than 10 times the dit time, sleep for the dit time.
             if time() - self._last_send > (self._dit_time * 10):
