@@ -1,8 +1,12 @@
 import logging
 import threading
+import traceback
+from time import sleep
+
 import usb.util
 import usb.backend.libusb1 as libusb1
 import usb.core
+import hid
 
 from core.common import BaseItem
 #os.environ['PYUSB_DEBUG'] = 'debug'
@@ -58,7 +62,7 @@ class ZadigUsbDevice(Device):
     CLICK_BOTH = 0x03
 
     # Init USB device
-    def __init__(self, id_vendor, id_product, interface, endpoint, max_packet_size):
+    def __init__(self, id_vendor, id_product, interface, endpoint, max_packet_size, call_on_stop=None):
         super().__init__()
         self._logger = logging.getLogger(__name__)
 
@@ -74,12 +78,8 @@ class ZadigUsbDevice(Device):
                           + ", \"endpoint\": " + hex(endpoint)
                           + ", \"max_packet_size\": " + str(max_packet_size) + "}")
 
-        self._backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
-        self._device = usb.core.find(idVendor=id_vendor, idProduct=id_product, backend=self._backend)
 
-        if self._device is None:
-            self._logger.error("Could not find USB device.")
-            raise ValueError('Device not found ' + id_vendor + '/' + id_product)
+        self._call_on_stop = call_on_stop
 
         self._stop = True
         self._thread = None
@@ -137,35 +137,61 @@ class ZadigUsbDevice(Device):
         elif not dah and self._dah:
             self._set_dah(False)
 
-    """
-    Main loop to collect data from the USB device. It will read data from the device and set the dit and dah values 
-    accordingly.
-    """
-    def _run_usb_device_collect(self):
+
+    def _zadig_device(self):
         self._logger.info("Starting USB device collect thread.")
         # Claim interface
+
+        self._backend = libusb1.get_backend(find_library=lambda x: "./libs/libusb-1.0.dll")
+        self._device = usb.core.find(idVendor=self._id_vendor, idProduct=self._id_product, backend=self._backend)
+
+        if self._device is None:
+            self._logger.error("Could not find USB device.")
+            raise ValueError('Device not found ' + self._id_vendor + '/' + self._id_product)
+
+
+        try:
+            self._device.reset()
+        except Exception as e:
+            self._logger.error("USB error: " + str(e))
+
+        try:
+            if self._device.is_kernel_driver_active(self._interface):
+                self._device.detach_kernel_driver(self._interface)
+        except Exception as e:
+            self._logger.error("USB detaching error: " + str(e))
 
         try:
             usb.util.claim_interface(self._device, self._interface)
             while not self._stop:
                 try:
-                    data = self._device.read(self._endpoint,self._max_packet_size)
-                    #self._logger.debug("Received data from USB device." + str(data))
+                    data = self._device.read(self._endpoint, self._max_packet_size)
+                    self._logger.debug("Received data from USB device." + str(data))
                     if data[0] == self.CLICK_BOTH or (data[2] > 0 and data[3] > 0):
-                        self._set_dit_dah( True,True)
-                    elif data[0] == self.CLICK_LEFT or data[2] > 0 :
-                        self._set_dit_dah( True,False)
+                        self._set_dit_dah(True, True)
+                    elif data[0] == self.CLICK_LEFT or data[2] > 0:
+                        self._set_dit_dah(True, False)
                     elif data[0] == self.CLICK_RIGHT or data[3] > 0:
-                        self._set_dit_dah(False,True)
+                        self._set_dit_dah(False, True)
                     else:
                         self._set_dit_dah(False, False)
 
                 except usb.core.USBError as e:
-                    data = None
-                    if e.args == ('Operation timed out',):
-                        continue
+                    self._logger.error("USB error: " + str(e))
+                    return False
         finally:
             # Release interface
             usb.util.release_interface(self._device, self._interface)
             usb.util.dispose_resources(self._device)
-            self._logger.info("Stopped USB device collect thread.")
+        return True
+
+    """
+    Main loop to collect data from the USB device. It will read data from the device and set the dit and dah values 
+    accordingly.
+    """
+    def _run_usb_device_collect(self):
+       self._zadig_device()
+       self._stop = True
+       if self._call_on_stop is not None:
+           self._call_on_stop()
+       self._logger.info("Stopped USB device collect thread.")

@@ -24,7 +24,7 @@ class DevicesForm:
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
 
-        self._button_keyboard_device = QtWidgets.QPushButton("Keyboard device Ctr+L / Ctr+R")
+        self._button_keyboard_device = QtWidgets.QPushButton("Veil or Kb Ctr+L / Ctr+R")
         self._button_keyboard_device.clicked.connect(self._click_keyboard_device)
         layout.addWidget(self._button_keyboard_device)
 
@@ -92,7 +92,7 @@ class DevicesForm:
             device = self._get_device()
 
             try:
-                self._usb_device = ZadigUsbDevice(device[0], device[1], device[2], device[3], device[4])
+                self._usb_device = ZadigUsbDevice(device[0], device[1], device[2], device[3], device[4], call_on_stop=self._stop_usb_device)
             except Exception as e:
                 self._logger.warning("Error initializing USB device: ", e)
                 self._usb_device = None
@@ -137,7 +137,6 @@ class DevicesForm:
             self._logger.debug("Keyboard device stopped.")
         else:
             self._logger.debug("Keyboard device is not running, skipping stop.")
-
 
     def start(self):
         self._logger.debug("Starting device.")
