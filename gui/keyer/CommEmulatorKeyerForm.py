@@ -6,44 +6,33 @@ from core.keyer import CommEmulatorWithKeyer
 
 class CommEmulatorKeyerForm(SerialForm):
 
-    def __init__(self,
-                 parent: QtWidgets.QBoxLayout):
+    def __init__(self,parent: QtWidgets.QBoxLayout, call_back_get_keyer=None):
 
         super().__init__(parent, __name__, button_text="Comm emulator with keyer",
                          callback_click=self._click_comm_emulator)
 
         self._logger = logging.getLogger(__name__)
 
-        self._keyer = None
-        self._comm_emulator_with_keyer = None
+        self._get_keyer = call_back_get_keyer
 
     def _click_comm_emulator(self):
-        if self._comm_emulator_with_keyer is None:
-            self.start()
-        else:
+        if self._get_keyer().is_serial_started():
             self.stop()
+        else:
+            self.start()
 
-    def on_serial(self):
-        if self._comm_emulator_with_keyer is not None:
-            self._comm_emulator_with_keyer.on()
-
-    def off_serial(self):
-        if self._comm_emulator_with_keyer is not None:
-            self._comm_emulator_with_keyer.off()
 
     def start(self):
-        if self._comm_emulator_with_keyer is None:
-            self._comm_emulator_with_keyer = CommEmulatorWithKeyer(port=self._get_port())
-            self._comm_emulator_with_keyer.start()
+        if not self._get_keyer().is_serial_started():
+            self._get_keyer().start_serial(self._get_port())
             self._button_comm_emulator.setStyleSheet("background-color: green; ")
             self._logger.debug("Comm emulator started.")
         else:
             self._logger.debug("Comm emulator is already running.")
 
     def stop(self):
-        if self._comm_emulator_with_keyer is not None:
-            self._comm_emulator_with_keyer.stop()
-            self._comm_emulator_with_keyer = None
+        if self._get_keyer().is_serial_started():
+            self._get_keyer().stop_serial()
             self._button_comm_emulator.setStyleSheet("background-color: red; ")
             self._logger.debug("Comm emulator stopped.")
         else:

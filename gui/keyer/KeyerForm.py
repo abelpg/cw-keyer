@@ -87,7 +87,7 @@ class KeyerForm:
         ##################
         layout.addWidget(QtWidgets.QLabel("Run keyer with comm output (HL2):"))
 
-        self._comm_form = CommEmulatorKeyerForm(layout)
+        self._comm_form = CommEmulatorKeyerForm(layout, call_back_get_keyer = self._get_keyer)
 
         widget.setLayout(layout)
         parent.addWidget(widget)
@@ -99,6 +99,8 @@ class KeyerForm:
         if self._keyer is not None:
             self._keyer.attach_observer(observer)
 
+    def _get_keyer(self):
+        return self._keyer
 
     def _click_keyer(self):
         if self._keyer is None:
@@ -165,8 +167,7 @@ class KeyerForm:
             wpm = self._text_wpm.text()
             Configuration.put_config(__name__, key=KeyerForm.CONFIG_KEYER_WPM_KEY, value=wpm)
 
-            self._keyer = Keyer(wpm=int(wpm),frequency=self._get_frequency(),  amplitude=self._get_amplitude(), output_device=self._get_device(),
-                                call_back_off_serial=self._comm_form.off_serial, call_back_on_serial=self._comm_form.on_serial)
+            self._keyer = Keyer(wpm=int(wpm),frequency=self._get_frequency(),  amplitude=self._get_amplitude(), output_device=self._get_device())
             self._keyer.start()
 
             self._callback_attach_device_observer(self._keyer)

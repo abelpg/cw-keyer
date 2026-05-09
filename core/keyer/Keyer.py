@@ -1,8 +1,8 @@
 import logging
 import threading
-from time import time
+from time import time, sleep
 
-from core.keyer import AudioDevice, ToneGenerator
+from core.keyer import AudioDevice, ToneGenerator, CommEmulatorWithKeyer
 from core.device import DeviceObserver
 
 
@@ -11,8 +11,7 @@ class Keyer(DeviceObserver):
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
 
-    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None,
-                 call_back_on_serial = None, call_back_off_serial = None):
+    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None):
         self._logger = logging.getLogger(__name__)
 
         # State machine init. dit dah
@@ -27,6 +26,8 @@ class Keyer(DeviceObserver):
         self._amplitude = amplitude
         self._output_device = output_device
 
+        self._comm_emulator_with_keyer = None
+
         # Principal thread to tak tics from dit and dah
         self._thread = threading.Thread(target=self._run_iambic, daemon=True)
         self._thread_stop = False
@@ -38,9 +39,6 @@ class Keyer(DeviceObserver):
         self._queue_dit = False
         self._queue_dah = False
 
-        # callbacks serial
-        self._call_back_on_serial = call_back_on_serial
-        self._call_back_off_serial = call_back_off_serial
 
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
@@ -76,16 +74,31 @@ class Keyer(DeviceObserver):
 
     def stop(self):
         self._tone_generator.stop()
+        self.stop_serial()
         self._thread_stop = True
         self._started = False
 
-    def _call_on_serial(self):
-        if self._call_back_on_serial is not None:
-            self._call_back_on_serial()
+    def is_serial_started(self):
+        return self._comm_emulator_with_keyer is not None
 
-    def _call_off_serial(self):
-        if self._call_back_off_serial is not None:
-            self._call_back_off_serial()
+    def start_serial(self, port):
+        if not self.is_serial_started():
+            self._comm_emulator_with_keyer = CommEmulatorWithKeyer(port=port)
+            self._comm_emulator_with_keyer.start()
+        else:
+            self._logger.debug("Comm emulator is already running.")
+
+    def stop_serial(self):
+        if self.is_serial_started():
+            self._comm_emulator_with_keyer.stop()
+            self._comm_emulator_with_keyer = None
+        else:
+            self._logger.debug("Comm emulator is not running, skipping stop.")
+
+    def _call_serial(self, duration):
+        if self.is_serial_started():
+            self._comm_emulator_with_keyer.send(duration)
+
 
     def _check_started(self):
         if not self._started:
@@ -127,9 +140,8 @@ class Keyer(DeviceObserver):
     def _send_dit(self) :
         timer = time()
 
-        self._call_on_serial()
+        self._call_serial(self._dit_time)
         self._tone_generator.play_tone(self._dit_time, self._space_time)
-        self._call_off_serial()
 
         self._print_time(timer, "dit")
 
@@ -140,9 +152,8 @@ class Keyer(DeviceObserver):
     def _send_dah(self):
         timer = time()
 
-        self._call_on_serial()
+        self._call_serial(self._dah_time)
         self._tone_generator.play_tone(self._dah_time, self._space_time)
-        self._call_off_serial()
 
         self._print_time(timer, "dah")
 
@@ -171,6 +182,7 @@ class Keyer(DeviceObserver):
                     elif self._dit_pressed:
                         self._queue_dit = True
 
+            # not elif because enqueue last.
             if self._queue_dah:
 
                 # When dit is pressed when start dah
@@ -187,6 +199,5 @@ class Keyer(DeviceObserver):
                         self._queue_dit = True
                     elif self._dah_pressed:
                         self._queue_dah = True
-
 
 
