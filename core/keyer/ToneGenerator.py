@@ -74,8 +74,8 @@ class ToneGenerator:
             waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
 
             # Definir tiempos de la envolvente (en segundos)
-            attack_t = 0.006
-            release_t = 0.004
+            attack_t = 0.002
+            release_t = 0.002
 
             # Convertir tiempos a número de muestras
             att_samples = int(attack_t * self._sample_rate)
