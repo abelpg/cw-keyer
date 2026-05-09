@@ -196,10 +196,12 @@ class Keyer(DeviceObserver):
 
         while not self._thread_stop:
 
-            if self._queue_dit:
-                self._send_dit()
             if self._queue_dah:
                 self._send_dah()
+
+            if self._queue_dit:
+                self._send_dit()
+
             # Sleep to avoid high CPU usage when no signal is being sent. If the last send was more than 10 times the dit time, sleep for the dit time.
             if time() - self._last_send > (self._dit_time * 10):
                 sleep(self._dit_time)
