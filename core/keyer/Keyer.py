@@ -39,6 +39,8 @@ class Keyer(DeviceObserver):
         self._queue_dit = False
         self._queue_dah = False
 
+        self._last_send = time()
+
 
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
@@ -138,24 +140,24 @@ class Keyer(DeviceObserver):
     Loop observes notify and wait dit time with space, finally release dit.
     """
     def _send_dit(self) :
-        timer = time()
+        self._last_send = time()
 
         self._call_serial(self._dit_time)
         self._tone_generator.play_tone(self._dit_time, self._space_time)
 
-        self._print_time(timer, "dit")
+        self._print_time(self._last_send, "dit")
 
 
     """
     Loop observes notify and wait dah time with space. Finally, release dah
     """
     def _send_dah(self):
-        timer = time()
+        self._last_send = time()
 
         self._call_serial(self._dah_time)
         self._tone_generator.play_tone(self._dah_time, self._space_time)
 
-        self._print_time(timer, "dah")
+        self._print_time(self._last_send, "dah")
 
 
     """
@@ -165,6 +167,8 @@ class Keyer(DeviceObserver):
     def _run_iambic(self):
 
         while not self._thread_stop:
+
+            self._condition = None
 
             if self._queue_dit:
                 # When dah is pressed when start dit
@@ -200,4 +204,7 @@ class Keyer(DeviceObserver):
                     elif self._dah_pressed:
                         self._queue_dah = True
 
+            # Sleep to avoid high CPU usage when no signal is being sent. If the last send was more than 10 times the dit time, sleep for the dit time.
+            if time() - self._last_send > (self._dit_time * 10):
+                sleep(self._dit_time)
 
