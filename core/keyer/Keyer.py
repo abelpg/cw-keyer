@@ -148,7 +148,6 @@ class Keyer(DeviceObserver):
 
         self._call_serial(self._dit_time)
         self._tone_generator.play_tone(self._dit_time, self._space_time)
-        sleep(self._dit_time + self._space_time)
 
         # Enqueue next.
         with self._thread_lock:
@@ -157,7 +156,6 @@ class Keyer(DeviceObserver):
                 self._queue_dah = True
             elif self._dit_pressed:
                 self._queue_dit = True
-
 
         self._print_time(self._last_send, "dit")
 
@@ -174,7 +172,6 @@ class Keyer(DeviceObserver):
 
         self._call_serial(self._dah_time)
         self._tone_generator.play_tone(self._dah_time, self._space_time)
-        sleep(self._dah_time+ self._space_time)
 
         # Enqueue next.
         with self._thread_lock:

@@ -11,7 +11,7 @@ class CommEmulatorWithKeyer(CommSerial):
     def __init__(self, port: str = 'COM4', baud_rate: int = 115200):
         CommSerial.__init__(self, port=port, baud_rate=baud_rate, rts_cts=True)
 
-        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._executor = ThreadPoolExecutor(max_workers=4)
 
         self._logger = logging.getLogger(__name__)
 

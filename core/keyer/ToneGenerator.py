@@ -44,8 +44,6 @@ class ToneGenerator:
         self._cache_audio_data = dict()
         self._cache_silence_data = dict()
 
-        self._executor = ThreadPoolExecutor(max_workers=1)
-
         self._audio_stream = None
         self._started = False
 
@@ -99,15 +97,20 @@ class ToneGenerator:
 
         return data
 
-    def _internal_play_tone(self, tone_duration: float, silence_duration: float):
+    def play_tone(self, tone_duration: float, silence_duration: float):
+        timer = time()
+
         if self._started:
             self._audio_stream.write(self._generate_soft_tone(tone_duration))
             self._audio_stream.write(self._generate_silence(silence_duration))
         else:
             self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
-    def play_tone(self, tone_duration: float, silence_duration: float = 0):
-       self._executor.submit(self._internal_play_tone, tone_duration, silence_duration)
+        time_to_sleep = (tone_duration + silence_duration) - (time() - timer)
+        if time_to_sleep > 0:
+            sleep(time_to_sleep)
+
+
 
     def start(self):
 
