@@ -24,7 +24,7 @@ class DevicesForm:
         layout = QtWidgets.QVBoxLayout()
         widget = QtWidgets.QWidget()
 
-        self._button_keyboard_device = QtWidgets.QPushButton("Veil or Kb Ctr+L / Ctr+R")
+        self._button_keyboard_device = QtWidgets.QPushButton("Veil Adapter (keys ` and + )")
         self._button_keyboard_device.clicked.connect(self._click_keyboard_device)
         layout.addWidget(self._button_keyboard_device)
 

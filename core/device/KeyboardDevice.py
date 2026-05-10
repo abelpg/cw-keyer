@@ -19,25 +19,21 @@ class KeyboardDevice(Device):
 
     @staticmethod
     def _is_key_dit(key):
-        return key == Key.ctrl_r or (hasattr(key, 'vk') and key.vk == 186)
+        return hasattr(key, 'vk') and key.vk == 186
 
     @staticmethod
     def _is_key_dah(key):
-        return key == Key.ctrl_l or (hasattr(key, 'vk') and key.vk == 187)
+        return hasattr(key, 'vk') and key.vk == 187
 
     def _on_press_key(self, key):
         self._logger.debug("Key pressed: " + str(key))
         if self._is_key_dah(key):
-            self._logger.debug("Ctrl R press")
             self._set_dah(True)
         elif self._is_key_dit(key):
-            self._logger.debug("Ctrl L press")
             self._set_dit(True)
 
     def _on_release_key(self, key):
         if self._is_key_dah(key):
-            self._logger.debug("Ctrl R release")
             self._set_dah(False)
         elif self._is_key_dit(key):
-            self._logger.debug("Ctrl L release")
             self._set_dit(False)
