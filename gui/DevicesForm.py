@@ -140,9 +140,9 @@ class DevicesForm:
 
     def start(self):
         self._logger.debug("Starting device.")
-
-        if not self._start_usb_device():
-            self._start_keyboard_device()
+        self._start_keyboard_device()
+        # if not self._start_usb_device():
+        #     self._start_keyboard_device()
 
     def stop_all(self):
         self._stop_keyboard_device()

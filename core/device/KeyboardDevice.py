@@ -11,6 +11,9 @@ class KeyboardDevice(Device):
         self._logger = logging.getLogger(__name__)
         self._kb_listener = Listener(on_press=self._on_press_key, on_release=self._on_release_key)
 
+        self._dah_pressed = False
+        self._dit_pressed = False
+
     def start(self):
         self._kb_listener.start()
 
@@ -26,14 +29,17 @@ class KeyboardDevice(Device):
         return hasattr(key, 'vk') and key.vk == 187
 
     def _on_press_key(self, key):
-        self._logger.debug("Key pressed: " + str(key))
-        if self._is_key_dah(key):
+        if self._is_key_dah(key) and not self._dah_pressed:
+            self._dah_pressed = True
             self._set_dah(True)
-        elif self._is_key_dit(key):
+        elif self._is_key_dit(key) and not self._dit_pressed:
+            self._dit_pressed  = True
             self._set_dit(True)
 
     def _on_release_key(self, key):
-        if self._is_key_dah(key):
+        if self._is_key_dah(key) and self._dah_pressed:
+            self._dah_pressed = False
             self._set_dah(False)
-        elif self._is_key_dit(key):
+        elif self._is_key_dit(key) and self._dit_pressed:
+            self._dit_pressed = False
             self._set_dit(False)

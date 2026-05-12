@@ -51,15 +51,16 @@ class Keyer(DeviceObserver):
         self._last_queued = None
         self._last_pressed = None
 
-        self._executor = ThreadPoolExecutor(max_workers=4)
+        self._executor = ThreadPoolExecutor(max_workers=1)
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
     def on_dah(self, pressed: bool):
+        self._logger.debug("on dah  " + str(pressed))
         if pressed:
             self._dah_pressed = True
             self._last_pressed = KeyerItem.DAH
-            self._executor.submit(self._enqueue, KeyerItem.DAH)
+            self._enqueue(KeyerItem.DAH)
         else:
             self._dah_pressed = False
 
@@ -67,19 +68,22 @@ class Keyer(DeviceObserver):
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
     """
     def on_dit(self, pressed: bool):
+        self._logger.debug("on dit  " + str(pressed))
         if pressed:
             self._dit_pressed = True
             self._last_pressed = KeyerItem.DIT
-            self._executor.submit(self._enqueue, KeyerItem.DIT)
+            self._enqueue(KeyerItem.DIT)
         else:
             self._dit_pressed = False
 
     def _enqueue(self, item: KeyerItem):
+        self._logger.debug("Queue " +str(self._queue.qsize()) +" - > " + str(item))
         if self._queue.qsize() < 1 or not self._pending:
             self._queue.put(item)
             self._last_queued = item
             if not self._pending:
-                self._keyer_call()
+                self._executor.submit(self._keyer_call)
+
 
     @staticmethod
     def _reverse( item: KeyerItem):
@@ -91,28 +95,33 @@ class Keyer(DeviceObserver):
     def _keyer_call(self):
         squeeze = self._dit_pressed and self._dah_pressed
         self._pending = self._queue.qsize() > 0
-        self._logger.debug("Keyer call: pending: {}, squeeze: {}, dit_pressed: {}, dah_pressed: {}".format(self._pending, squeeze, self._dit_pressed, self._dah_pressed))
+        self._logger.debug("Queue " +str(self._queue.qsize()) )
         if self._pending:
             # process
             self._last_squeeze = squeeze
             dit_dah = self._queue.get_nowait()
             self._play_dit_dah(dit_dah)
+
             self._keyer_call()
         else:
             # process mode
             if squeeze:
+                self._logger.debug("Squeeze")
                 if self._mode == Mode.ULTIMATIC:
                     self._enqueue(self._last_pressed)
                 elif self._mode == Mode.IAMBIC_A or self._mode == Mode.IAMBIC_B:
                     self._enqueue(Keyer._reverse(self._last_queued))
 
             elif self._dit_pressed:
+                self._logger.debug("Dit pressed")
                 self._enqueue(KeyerItem.DIT)
 
             elif self._dah_pressed:
+                self._logger.debug("Dah pressed")
                 self._enqueue(KeyerItem.DAH)
 
             elif self._mode == Mode.IAMBIC_B and self._last_squeeze:
+                self._logger.debug("Last squeeze " + str(self._last_queued))
                 self._enqueue(Keyer._reverse(self._last_queued))
                 self._last_squeeze = False
 
@@ -196,7 +205,7 @@ class Keyer(DeviceObserver):
 
         self._tone_generator.play_tone(time_send, self._space_time)
 
-        self._print_time(timer, "dit")
+        self._print_time(timer, dit_dah)
 
 
 
