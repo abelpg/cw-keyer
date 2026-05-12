@@ -8,7 +8,7 @@ from core.emulator.CommSerial import CommSerial
 class CommEmulatorWithKeyer(CommSerial):
 
 
-    def __init__(self, port: str = 'COM4', baud_rate: int = 115200):
+    def __init__(self, port: str = 'COM4', baud_rate: int = 9600):
         CommSerial.__init__(self, port=port, baud_rate=baud_rate, rts_cts=True)
 
         self._executor = ThreadPoolExecutor(max_workers=4)

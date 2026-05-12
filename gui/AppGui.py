@@ -98,7 +98,7 @@ class AppGui(QWidget):
 
     def show(self):
         super().show()
-        #self._devices_form.start()
+        self._devices_form.start()
 
 
     def closeEvent(self, event):

@@ -1,9 +1,22 @@
 import logging
-import threading
+import queue
+from concurrent.futures import ThreadPoolExecutor
+from enum import Enum
 from time import time, sleep
+
+
 
 from core.keyer import AudioDevice, ToneGenerator, CommEmulatorWithKeyer
 from core.device import DeviceObserver
+
+class KeyerItem(Enum):
+    DIT = 1
+    DAH = 2
+
+class Mode(Enum):
+    ULTIMATIC = 0
+    IAMBIC_A = 1
+    IAMBIC_B = 1
 
 
 class Keyer(DeviceObserver):
@@ -13,6 +26,8 @@ class Keyer(DeviceObserver):
 
     def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None):
         self._logger = logging.getLogger(__name__)
+
+        self._mode = Mode.IAMBIC_B
 
         # State machine init. dit dah
         self._dit_pressed = False
@@ -29,56 +44,98 @@ class Keyer(DeviceObserver):
         self._comm_emulator_with_keyer = None
 
         # Principal thread to tak tics from dit and dah
-        self._thread = threading.Thread(target=self._run_iambic, daemon=True)
-        self._thread_stop = False
+        self._queue = queue.Queue()
 
-        # Locks to prevent concurrent modification
-        self._thread_lock = threading.Lock()
-        self._started = False
+        self._pending = False
+        self._last_squeeze = False
+        self._last_queued = None
+        self._last_pressed = None
 
-        self._queue_dit = False
-        self._queue_dah = False
-
-        self._last_send = time()
-
-
+        self._executor = ThreadPoolExecutor(max_workers=1)
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
     def on_dah(self, pressed: bool):
-        self._check_started()
+        self._logger.debug("on dah  " + str(pressed))
         if pressed:
             self._dah_pressed = True
-            with self._thread_lock:
-                self._queue_dah = True
+            self._last_pressed = KeyerItem.DAH
+            self._enqueue(KeyerItem.DAH)
         else:
             self._dah_pressed = False
-
 
     """
     Called when the dit is pressed or released. The pressed parameter is True when the dit is pressed and False when it is released.
     """
     def on_dit(self, pressed: bool):
+        self._logger.debug("on dit  " + str(pressed))
         if pressed:
             self._dit_pressed = True
-            with self._thread_lock:
-                self._queue_dit = True
+            self._last_pressed = KeyerItem.DIT
+            self._enqueue(KeyerItem.DIT)
         else:
             self._dit_pressed = False
 
+    def _enqueue(self, item: KeyerItem):
+        self._logger.debug("Queue " +str(self._queue.qsize()) +" - > " + str(item))
+        if self._queue.qsize() < 1 or not self._pending:
+            self._queue.put(item)
+            self._last_queued = item
+            if not self._pending:
+                self._executor.submit(self._keyer_call)
+
+
+    @staticmethod
+    def _reverse( item: KeyerItem):
+        if item == KeyerItem.DIT:
+            return KeyerItem.DAH
+        else:
+            return KeyerItem.DIT
+
+    def _keyer_call(self):
+        squeeze = self._dit_pressed and self._dah_pressed
+        self._pending = self._queue.qsize() > 0
+        self._logger.debug("Queue " +str(self._queue.qsize()) )
+        if self._pending:
+            # process
+            self._last_squeeze = squeeze
+            dit_dah = self._queue.get_nowait()
+            self._play_dit_dah(dit_dah)
+
+            self._keyer_call()
+        else:
+            # process mode
+            if squeeze:
+                self._logger.debug("Squeeze")
+                if self._mode == Mode.ULTIMATIC:
+                    self._enqueue(self._last_pressed)
+                elif self._mode == Mode.IAMBIC_A or self._mode == Mode.IAMBIC_B:
+                    self._enqueue(Keyer._reverse(self._last_queued))
+
+            elif self._dit_pressed:
+                self._logger.debug("Dit pressed")
+                self._enqueue(KeyerItem.DIT)
+
+            elif self._dah_pressed:
+                self._logger.debug("Dah pressed")
+                self._enqueue(KeyerItem.DAH)
+
+            elif self._mode == Mode.IAMBIC_B and self._last_squeeze:
+                self._logger.debug("Last squeeze " + str(self._last_queued))
+                self._enqueue(Keyer._reverse(self._last_queued))
+                self._last_squeeze = False
+
+
+
     def start(self):
-        self._thread.start()
         self._tone_generator = ToneGenerator(frequency=self._frequency,
                                              amplitude=self._amplitude,
                                              output_device=self._output_device)
         self._tone_generator.start()
-        self._started = True
 
     def stop(self):
         self._tone_generator.stop()
         self.stop_serial()
-        self._thread_stop = True
-        self._started = False
 
     def is_serial_started(self):
         return self._comm_emulator_with_keyer is not None
@@ -101,10 +158,6 @@ class Keyer(DeviceObserver):
         if self.is_serial_started():
             self._comm_emulator_with_keyer.send(duration)
 
-
-    def _check_started(self):
-        if not self._started:
-            self._logger.warning("Keyer is not started. Please call start() method before sending signals.")
 
     """
     So the word PARIS has been chosen to represent the standard word length for measuring the speed of sending CW.    
@@ -139,67 +192,20 @@ class Keyer(DeviceObserver):
     """
     Loop observes notify and wait dit time with space, finally release dit.
     """
-    def _send_dit(self) :
-        self._last_send = time()
+    def _play_dit_dah(self, dit_dah : KeyerItem) :
+        timer = time()
 
-        with self._thread_lock:
-            if self._dah_pressed:
-                self._queue_dah = True
+        time_send = 0
+        if dit_dah == KeyerItem.DIT:
+            time_send = self._dit_time
+        elif dit_dah == KeyerItem.DAH:
+            time_send = self._dah_time
 
-        self._call_serial(self._dit_time)
-        self._tone_generator.play_tone(self._dit_time, self._space_time)
+        self._call_serial(time_send)
 
-        # Enqueue next.
-        with self._thread_lock:
-            self._queue_dit = False
-            if self._dah_pressed:
-                self._queue_dah = True
-            elif self._dit_pressed:
-                self._queue_dit = True
+        self._tone_generator.play_tone(time_send, self._space_time)
 
-        self._print_time(self._last_send, "dit")
+        self._print_time(timer, dit_dah)
 
 
-    """
-    Loop observes notify and wait dah time with space. Finally, release dah
-    """
-    def _send_dah(self):
-        self._last_send = time()
-
-        with self._thread_lock:
-            if self._dit_pressed:
-                self._queue_dit = True
-
-        self._call_serial(self._dah_time)
-        self._tone_generator.play_tone(self._dah_time, self._space_time)
-
-        # Enqueue next.
-        with self._thread_lock:
-            self._queue_dah = False
-            if self._dit_pressed:
-                self._queue_dit = True
-            elif self._dah_pressed:
-                self._queue_dah = True
-
-
-        self._print_time(self._last_send, "dah")
-
-
-    """
-    Main loop to control the state of the keyer. It will check the state of the dit and dah and send the corresponding signal. 
-    If both are pressed, it will send both signals. To improve timing, there are two sleeps after and before.
-    """
-    def _run_iambic(self):
-
-        while not self._thread_stop:
-
-            if self._queue_dah:
-                self._send_dah()
-
-            if self._queue_dit:
-                self._send_dit()
-
-            # Sleep to avoid high CPU usage when no signal is being sent. If the last send was more than 10 times the dit time, sleep for the dit time.
-            if time() - self._last_send > (self._dit_time * 10):
-                sleep(self._dit_time)
 
