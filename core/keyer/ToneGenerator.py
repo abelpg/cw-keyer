@@ -148,7 +148,6 @@ class ToneGenerator:
 
         self._continuous_tone_sound = sound
         if self._playing or not self._started:
-            self._logger.warning("Continuous tone is already playing or no tone .")
             return
 
         self._stop_continuous_event.clear()
