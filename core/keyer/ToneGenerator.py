@@ -26,8 +26,8 @@ class AudioDevice(BaseItem):
 class ToneGenerator:
 
     def __init__(self,
-                 sample_rate: int = 44000,
-                 frames_per_buffer: int = 1000,
+                 sample_rate: int = 11025,
+                 frames_per_buffer: int = 100,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -69,7 +69,7 @@ class ToneGenerator:
 
 
 
-    def _generate_soft_tone(self, tone_duration: float, attack_time: float = 0.002, release_time: float = 0.002):
+    def _generate_soft_tone(self, tone_duration: float, attack_time: float = 0.007, release_time: float = 0.007):
         data = self._cache_audio_data.get(tone_duration)
         if data is None:
             self._logger.info("Generate tone " +str(tone_duration))
