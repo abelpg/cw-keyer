@@ -15,14 +15,22 @@ class CommEmulatorWithKeyer(CommSerial):
 
         self._logger = logging.getLogger(__name__)
 
-    def send(self, duration):
+    def send_signal_background(self, duration):
         self._executor.submit(self._background_send, duration)
+
+    def turn_on(self):
+        if not self._serial.dtr:
+            self._logger.debug("Turning on DTR.")
+            self._serial.dtr = True
+
+    def turn_off(self):
+        if self._serial.dtr:
+            self._logger.debug("Turning on DTR.")
+            self._serial.dtr = False
 
     def _background_send(self, duration):
         if self._serial is not None:
-            self._logger.debug("Turning on DTR.")
-            self._serial.dtr = True
+            self.turn_on()
             sleep(duration)
-            self._serial.dtr = False
-            self._logger.debug("Turning off DTR.")
+            self.turn_off()
 

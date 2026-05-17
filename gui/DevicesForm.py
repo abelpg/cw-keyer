@@ -5,13 +5,13 @@ from PySide6 import QtWidgets
 from core.config import Configuration
 from core.device import ZadigUsbDevice, KeyboardDevice, DeviceObserver, HidDeviceItem
 
-
 class DevicesForm:
 
 
     CONFIG_DEVICE_KEY = "usb_device"
 
-    def __init__(self, parent: QtWidgets.QBoxLayout, device_stopped_callback=None, device_started_callback = None):
+
+    def __init__(self, parent: QtWidgets.QBoxLayout, show_zadig = False, device_stopped_callback=None, device_started_callback = None):
         self._parent = parent
         self._logger = logging.getLogger(__name__)
         self._device_stopped_callback = device_stopped_callback
@@ -29,22 +29,22 @@ class DevicesForm:
         layout.addWidget(self._button_keyboard_device)
 
         #####
-        widget_h = QtWidgets.QWidget()
-        layout_h = QtWidgets.QHBoxLayout()
+        if show_zadig:
+            widget_h = QtWidgets.QWidget()
+            layout_h = QtWidgets.QHBoxLayout()
 
-        self._button_usb_device = QtWidgets.QPushButton("Zadig USB device")
-        self._button_usb_device.clicked.connect(self._click_usb_device)
+            self._button_usb_device = QtWidgets.QPushButton("Zadig USB device")
+            self._button_usb_device.clicked.connect(self._click_usb_device)
 
-        self._device_list = QtWidgets.QComboBox()
-        self._set_devices()
+            self._device_list = QtWidgets.QComboBox()
+            self._set_devices()
 
-        layout_h.addWidget(self._button_usb_device)
-        layout_h.addWidget(self._device_list)
+            layout_h.addWidget(self._button_usb_device)
+            layout_h.addWidget(self._device_list)
 
-        widget_h.setLayout(layout_h)
-        layout.addWidget(widget_h)
+            widget_h.setLayout(layout_h)
+            layout.addWidget(widget_h)
         #####
-
 
         widget.setLayout(layout)
         parent.addWidget(widget)

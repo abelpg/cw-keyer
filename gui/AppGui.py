@@ -1,6 +1,7 @@
 import logging
 
 from core.emulator import KeyboardEmulator
+from core.config import Configuration
 from gui.CommEmulatorNoKeyerForm import CommEmulatorNoKeyerForm
 from gui.DevicesForm import DevicesForm
 from gui.keyer.KeyerForm import KeyerForm
@@ -16,6 +17,8 @@ except Exception:
     QWidget = None
 
 class AppGui(QWidget):
+    CONFIG_SHOW_ZADIG = "show_zadig"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._logger = logging.getLogger(__name__)
@@ -29,29 +32,33 @@ class AppGui(QWidget):
     def _create_form(self):
         self._layout = QtWidgets.QVBoxLayout(self)
 
-        self._devices_form = DevicesForm(self._layout, device_stopped_callback=self._device_stopped, device_started_callback=self._device_started)
+        self._devices_form = DevicesForm(self._layout, show_zadig= AppGui._show_zadig(), device_stopped_callback=self._device_stopped, device_started_callback=self._device_started)
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
-
         self._layout.addWidget(QtWidgets.QLabel("Send direct output from key to comm (CWType):"))
         self._comm_emulator_form = CommEmulatorNoKeyerForm(self._layout,
                                                            callback_attach_device_observer=self._devices_form.attach_observer,
                                                            callback_detach_device_observer=self._devices_form.detach_observer)
 
+        if AppGui._show_zadig():
+            self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
+            self._layout.addWidget(QtWidgets.QLabel("Send output from key to Ctr+L / Ctr+R (morse invaders):"))
+            self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
+            self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
+            self._layout.addWidget(self._button_keyboard_emulator)
+
+
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
-
-        self._layout.addWidget(QtWidgets.QLabel("Send output from key to Ctr+L / Ctr+R (morse invaders):"))
-        self._button_keyboard_emulator = QtWidgets.QPushButton("Keyboard emulator")
-        self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
-        self._layout.addWidget(self._button_keyboard_emulator)
-
-        self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
-
         self._keyer_form = KeyerForm(self._layout,
                                     callback_attach_device_observer=self._devices_form.attach_observer,
                                     callback_detach_device_observer=self._devices_form.detach_observer)
 
 
+
+    @staticmethod
+    def _show_zadig():
+        value = Configuration.get_config(__name__, AppGui.CONFIG_SHOW_ZADIG, "False")
+        return eval(value)
 
     def _stop(self, from_device_form=False):
         self._keyer_form.stop()
@@ -60,7 +67,6 @@ class AppGui(QWidget):
         #self._stop_comm_emulator_with_keyer()
         if not from_device_form:
             self._devices_form.stop_all()
-
 
     def _click_keyboard_emulator(self):
         if self._keyboard_emulator is None:

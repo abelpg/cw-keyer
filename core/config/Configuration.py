@@ -1,5 +1,5 @@
 import configparser
-import logging
+
 
 class Configuration:
 
@@ -23,5 +23,9 @@ class Configuration:
         config.read(Configuration.CONFIG_FILE)
         if config.has_section(section) and config.has_option(section, key):
             return config.get(section, key)
+
+        if default_value is not None:
+            Configuration.put_config( section, key, default_value)
+
         return default_value
 

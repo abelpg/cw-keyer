@@ -1,4 +1,5 @@
 import logging
+import threading
 from time import sleep, time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -26,7 +27,7 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44000,
-                 frames_per_buffer: int = 100,
+                 frames_per_buffer: int = 1000,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -46,6 +47,11 @@ class ToneGenerator:
 
         self._audio_stream = None
         self._started = False
+        self._stop_continuous_event = threading.Event()
+        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._continuous_tone_sound = False
+        self._playing = False
+
 
     def _generate_silence(self, silence_duration: float):
 
@@ -61,7 +67,9 @@ class ToneGenerator:
 
         return data
 
-    def _generate_soft_tone(self, tone_duration: float):
+
+
+    def _generate_soft_tone(self, tone_duration: float, attack_time: float = 0.002, release_time: float = 0.002):
         data = self._cache_audio_data.get(tone_duration)
         if data is None:
             self._logger.info("Generate tone " +str(tone_duration))
@@ -71,24 +79,22 @@ class ToneGenerator:
             # Formula: A * sin(2 * pi * f * t)
             waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
 
-            # Definir tiempos de la envolvente (en segundos)
-            attack_t = 0.002
-            release_t = 0.002
+            soft_audio = waveform
+            if attack_time > 0.0 or release_time > 0.0:
+                # Convertir tiempos a número de muestras
+                att_samples = int(attack_time * self._sample_rate)
+                rel_samples = int(release_time * self._sample_rate)
+                sus_samples = len(waveform) - att_samples - rel_samples
 
-            # Convertir tiempos a número de muestras
-            att_samples = int(attack_t * self._sample_rate)
-            rel_samples = int(release_t * self._sample_rate)
-            sus_samples = len(waveform) - att_samples - rel_samples
+                # Crear la envolvente (0 -> 1 -> 1 -> 0)
+                envelope = np.concatenate([
+                    np.linspace(0, 1, att_samples),  # Attack
+                    np.ones(sus_samples),  # Sustain
+                    np.linspace(1, 0, rel_samples)  # Release
+                ])
 
-            # Crear la envolvente (0 -> 1 -> 1 -> 0)
-            envelope = np.concatenate([
-                np.linspace(0, 1, att_samples),  # Attack
-                np.ones(sus_samples),  # Sustain
-                np.linspace(1, 0, rel_samples)  # Release
-            ])
-
-            # Aplicar envolvente al audio
-            soft_audio = waveform * envelope
+                # Aplicar envolvente al audio
+                soft_audio = waveform * envelope
 
             # Guardar como archivo WAV de 16 bits
             out = (soft_audio * 32767).astype(np.int16)
@@ -98,19 +104,59 @@ class ToneGenerator:
         return data
 
     def play_tone(self, tone_duration: float, silence_duration: float):
+        self._logger.debug("Play tone init " + str(tone_duration))
+        self._stop_continuous_event.set()
         timer = time()
 
         if self._started:
-            self._audio_stream.write(self._generate_soft_tone(tone_duration))
-            self._audio_stream.write(self._generate_silence(silence_duration))
+            if tone_duration > 0:
+                self._audio_stream.write(self._generate_soft_tone(tone_duration))
+            if silence_duration > 0:
+                self._audio_stream.write(self._generate_silence(silence_duration))
         else:
             self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
         time_to_sleep = (tone_duration + silence_duration) - (time() - timer)
         if time_to_sleep > 0:
             sleep(time_to_sleep)
+        self._logger.debug("Play tone end" + str(time_to_sleep))
 
 
+    def _continuous_tone_loop(self):
+        self._logger.debug("Continuous tone started at %d Hz", self._frequency)
+
+        chunk_duration = (1.0 / self._frequency) # Duration of each chunk to write (one period of the sine wave)
+
+        tone_chunk = self._generate_soft_tone(chunk_duration, 0, 0)
+        silence_chunk = self._generate_silence(chunk_duration)
+
+        self._playing = True
+        cycles_silence = 0
+        while not self._stop_continuous_event.is_set():
+            if self._continuous_tone_sound:
+                self._audio_stream.write(tone_chunk)
+                cycles_silence=0
+            else:
+                self._audio_stream.write(silence_chunk)
+                cycles_silence += 1
+                if cycles_silence >= 1000:
+                    self._stop_continuous_event.set()
+
+        self._playing = False
+
+    def continuous_tone(self, sound : bool):
+
+        self._continuous_tone_sound = sound
+        if self._playing or not self._started:
+            return
+
+        self._stop_continuous_event.clear()
+        self._executor.submit(self._continuous_tone_loop)
+
+
+    def stop_continuous_tone(self):
+        if self._playing:
+            self._stop_continuous_event.set()
 
     def start(self):
 

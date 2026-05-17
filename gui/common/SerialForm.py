@@ -11,6 +11,8 @@ class SerialForm:
     def __init__(self, parent: QtWidgets.QBoxLayout, class_name, button_text : str, callback_click=None):
         self._logger = logging.getLogger(__name__)
 
+        self._logger.debug("Creating SerialForm with class name: " + class_name)
+
         self.parent = parent
 
         self._class_name = class_name
@@ -35,6 +37,9 @@ class SerialForm:
 
     def _set_ports(self):
         if self._comm_emulator_port is not None:
+
+            self._logger.debug(f"Found {self._class_name}")
+
             config_port = Configuration.get_config(self._class_name, SerialForm.CONFIG_SERIAL_PORT_KEY)
             index = 0
             found = False

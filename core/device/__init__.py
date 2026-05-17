@@ -4,9 +4,9 @@ from .KeyboardDevice import KeyboardDevice
 from .DeviceObserver import DeviceObserver
 from .ZadigUsbDevice import HidDeviceItem
 __all__ = [
+    "DeviceObserver",
     "Device",
     "HidDeviceItem",
     "ZadigUsbDevice",
-    "KeyboardDevice",
-    "DeviceObserver"
+    "KeyboardDevice"
 ]
