@@ -1,4 +1,5 @@
 import logging
+import threading
 from time import sleep, time
 from concurrent.futures import ThreadPoolExecutor
 
@@ -46,6 +47,10 @@ class ToneGenerator:
 
         self._audio_stream = None
         self._started = False
+        self._stop_continuous_event = threading.Event()
+        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._playing = False
+
 
     def _generate_silence(self, silence_duration: float):
 
@@ -61,7 +66,9 @@ class ToneGenerator:
 
         return data
 
-    def _generate_soft_tone(self, tone_duration: float):
+
+
+    def _generate_soft_tone(self, tone_duration: float, attack_time: float = 0.002, release_time: float = 0.002):
         data = self._cache_audio_data.get(tone_duration)
         if data is None:
             self._logger.info("Generate tone " +str(tone_duration))
@@ -71,24 +78,22 @@ class ToneGenerator:
             # Formula: A * sin(2 * pi * f * t)
             waveform = self._amplitude * np.sin(2 * np.pi * self._frequency * t)
 
-            # Definir tiempos de la envolvente (en segundos)
-            attack_t = 0.002
-            release_t = 0.002
+            soft_audio = waveform
+            if attack_time > 0.0 or release_time > 0.0:
+                # Convertir tiempos a número de muestras
+                att_samples = int(attack_time * self._sample_rate)
+                rel_samples = int(release_time * self._sample_rate)
+                sus_samples = len(waveform) - att_samples - rel_samples
 
-            # Convertir tiempos a número de muestras
-            att_samples = int(attack_t * self._sample_rate)
-            rel_samples = int(release_t * self._sample_rate)
-            sus_samples = len(waveform) - att_samples - rel_samples
+                # Crear la envolvente (0 -> 1 -> 1 -> 0)
+                envelope = np.concatenate([
+                    np.linspace(0, 1, att_samples),  # Attack
+                    np.ones(sus_samples),  # Sustain
+                    np.linspace(1, 0, rel_samples)  # Release
+                ])
 
-            # Crear la envolvente (0 -> 1 -> 1 -> 0)
-            envelope = np.concatenate([
-                np.linspace(0, 1, att_samples),  # Attack
-                np.ones(sus_samples),  # Sustain
-                np.linspace(1, 0, rel_samples)  # Release
-            ])
-
-            # Aplicar envolvente al audio
-            soft_audio = waveform * envelope
+                # Aplicar envolvente al audio
+                soft_audio = waveform * envelope
 
             # Guardar como archivo WAV de 16 bits
             out = (soft_audio * 32767).astype(np.int16)
@@ -111,6 +116,53 @@ class ToneGenerator:
             sleep(time_to_sleep)
 
 
+
+    def _continuous_tone_loop(self):
+        """Internal loop that writes sine wave chunks until stop event is set."""
+        self._logger.debug("Continuous tone started at %d Hz", self._frequency)
+
+        timer = time()
+        chunk_duration = (1.0 / self._frequency) # Duration of each chunk to write (one period of the sine wave)
+
+        self._playing = True
+        cycles = 0
+        while not self._stop_continuous_event.is_set():
+            chunk = self._generate_soft_tone(chunk_duration, 0, 0)
+            self._audio_stream.write(chunk)
+            cycles += 1
+
+        # Write a short silence to avoid a hard click on release
+        total_time = time() - timer
+        self._logger.debug("Continuous tone stopped in " + str(total_time) + " seconds. Chunk" + str(chunk_duration) + " cycles : " +str(cycles))
+        chunk = self._generate_silence(total_time / 2.0)
+        self._audio_stream.write(chunk)
+        self._playing = False
+
+
+
+    def start_continuous_tone(self):
+        """
+        Start playing a continuous sinusoidal tone in a background thread.
+        Intended to be called on button-press.
+        Call stop_continuous_tone() on button-release to stop playback.
+
+        :param chunk_duration: Duration (seconds) of each audio chunk written per iteration.
+        """
+        if self._playing or not self._started:
+            self._logger.warning("Continuous tone is already playing or no tone .")
+            return
+
+        self._stop_continuous_event.clear()
+        self._executor.submit(self._continuous_tone_loop)
+
+
+    def stop_continuous_tone(self):
+        """
+        Stop the continuous sinusoidal tone.
+        Intended to be called on button-release.
+        """
+        if self._playing:
+            self._stop_continuous_event.set()
 
     def start(self):
 

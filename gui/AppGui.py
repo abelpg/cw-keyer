@@ -47,6 +47,7 @@ class AppGui(QWidget):
             self._button_keyboard_emulator.clicked.connect(self._click_keyboard_emulator)
             self._layout.addWidget(self._button_keyboard_emulator)
 
+
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
         self._keyer_form = KeyerForm(self._layout,
                                     callback_attach_device_observer=self._devices_form.attach_observer,
@@ -66,7 +67,6 @@ class AppGui(QWidget):
         #self._stop_comm_emulator_with_keyer()
         if not from_device_form:
             self._devices_form.stop_all()
-
 
     def _click_keyboard_emulator(self):
         if self._keyboard_emulator is None:

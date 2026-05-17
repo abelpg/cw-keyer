@@ -4,7 +4,6 @@ from PySide6 import QtWidgets
 
 from core.config import Configuration
 from core.device import ZadigUsbDevice, KeyboardDevice, DeviceObserver, HidDeviceItem
-from gui.N1MMForm import N1MMForm
 
 class DevicesForm:
 
@@ -28,10 +27,6 @@ class DevicesForm:
         self._button_keyboard_device = QtWidgets.QPushButton("Veil Adapter (keys ` and + )")
         self._button_keyboard_device.clicked.connect(self._click_keyboard_device)
         layout.addWidget(self._button_keyboard_device)
-
-        layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
-        layout.addWidget(QtWidgets.QLabel("Input keyer from N1MM:"))
-        self._comm_n1mm_form = N1MMForm(layout)
 
         #####
         if show_zadig:

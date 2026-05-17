@@ -155,6 +155,16 @@ class Keyer(DeviceObserver):
         else:
             self._logger.debug("Comm emulator is not running, skipping stop.")
 
+    def proxy_on(self):
+        if self.is_serial_started():
+            self._comm_emulator_with_keyer.turn_on()
+        self._tone_generator.start_continuous_tone()
+
+    def proxy_off(self):
+        if self.is_serial_started():
+            self._comm_emulator_with_keyer.turn_off()
+        self._tone_generator.stop_continuous_tone()
+
     def _call_serial(self, duration):
         if self.is_serial_started():
             self._comm_emulator_with_keyer.send(duration)

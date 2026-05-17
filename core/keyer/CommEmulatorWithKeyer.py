@@ -18,11 +18,19 @@ class CommEmulatorWithKeyer(CommSerial):
     def send(self, duration):
         self._executor.submit(self._background_send, duration)
 
-    def _background_send(self, duration):
-        if self._serial is not None:
+    def turn_on(self):
+        if not self._serial.dtr:
             self._logger.debug("Turning on DTR.")
             self._serial.dtr = True
-            sleep(duration)
+
+    def turn_off(self):
+        if self._serial.dtr:
+            self._logger.debug("Turning on DTR.")
             self._serial.dtr = False
-            self._logger.debug("Turning off DTR.")
+
+    def _background_send(self, duration):
+        if self._serial is not None:
+            self.turn_on()
+            sleep(duration)
+            self.turn_off()
 

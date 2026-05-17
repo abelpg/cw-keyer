@@ -5,7 +5,7 @@ from PySide6 import QtWidgets
 from core.config import Configuration
 from core.keyer import Keyer,ToneGenerator
 from gui.keyer import CommEmulatorKeyerForm
-
+from gui.keyer.N1MMForm import N1MMForm
 
 
 class KeyerForm:
@@ -79,14 +79,15 @@ class KeyerForm:
 
         widget_h.setLayout(layout_h)
         layout.addWidget(widget_h)
+
         ##################
-
-
         layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
+        layout.addWidget(QtWidgets.QLabel("Input keyer from N1MM:"))
+        self._comm_n1mm_form = N1MMForm(layout, call_back_get_keyer = self._get_keyer)
 
         ##################
+        layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
         layout.addWidget(QtWidgets.QLabel("Run keyer with comm output (HL2):"))
-
         self._comm_form = CommEmulatorKeyerForm(layout, call_back_get_keyer = self._get_keyer)
 
         widget.setLayout(layout)
@@ -147,7 +148,6 @@ class KeyerForm:
         amplitude = self._text_amplitude.text()
         Configuration.put_config(__name__, key=KeyerForm.CONFIG_SOUND_AMPLITUDE_KEY, value=amplitude)
         return float(amplitude)
-
 
     def stop(self):
         if self._keyer is not None:
