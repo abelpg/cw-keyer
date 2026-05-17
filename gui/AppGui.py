@@ -35,7 +35,6 @@ class AppGui(QWidget):
         self._devices_form = DevicesForm(self._layout, show_zadig= AppGui._show_zadig(), device_stopped_callback=self._device_stopped, device_started_callback=self._device_started)
 
         self._layout.addWidget(QtWidgets.QFrame(frameShape=QtWidgets.QFrame.HLine))
-
         self._layout.addWidget(QtWidgets.QLabel("Send direct output from key to comm (CWType):"))
         self._comm_emulator_form = CommEmulatorNoKeyerForm(self._layout,
                                                            callback_attach_device_observer=self._devices_form.attach_observer,

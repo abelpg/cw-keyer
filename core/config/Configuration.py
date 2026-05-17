@@ -24,7 +24,8 @@ class Configuration:
         if config.has_section(section) and config.has_option(section, key):
             return config.get(section, key)
 
-        Configuration.put_config( section, key, default_value)
+        if default_value is not None:
+            Configuration.put_config( section, key, default_value)
 
         return default_value
 

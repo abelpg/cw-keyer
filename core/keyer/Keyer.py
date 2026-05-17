@@ -52,6 +52,7 @@ class Keyer(DeviceObserver):
         self._last_pressed = None
 
         self._executor = ThreadPoolExecutor(max_workers=1)
+
     """
     Called when the dah is pressed or released. The pressed parameter is True when the dah is pressed and False when it is released.
     """
