@@ -27,7 +27,7 @@ class ToneGenerator:
 
     def __init__(self,
                  sample_rate: int = 44000,
-                 frames_per_buffer: int = 100,
+                 frames_per_buffer: int = 1000,
                  frequency: int = 650,
                  amplitude: float = 0.5,
                  output_device : AudioDevice = None):
@@ -48,7 +48,8 @@ class ToneGenerator:
         self._audio_stream = None
         self._started = False
         self._stop_continuous_event = threading.Event()
-        self._executor = ThreadPoolExecutor(max_workers=2)
+        self._executor = ThreadPoolExecutor(max_workers=1)
+        self._continuous_tone_sound = False
         self._playing = False
 
 
@@ -103,51 +104,49 @@ class ToneGenerator:
         return data
 
     def play_tone(self, tone_duration: float, silence_duration: float):
+        self._logger.debug("Play tone init " + str(tone_duration))
+        self._stop_continuous_event.set()
         timer = time()
 
         if self._started:
-            self._audio_stream.write(self._generate_soft_tone(tone_duration))
-            self._audio_stream.write(self._generate_silence(silence_duration))
+            if tone_duration > 0:
+                self._audio_stream.write(self._generate_soft_tone(tone_duration))
+            if silence_duration > 0:
+                self._audio_stream.write(self._generate_silence(silence_duration))
         else:
             self._logger.warning("ToneGenerator is not started. Please call start() method before playing tones.")
 
         time_to_sleep = (tone_duration + silence_duration) - (time() - timer)
         if time_to_sleep > 0:
             sleep(time_to_sleep)
-
+        self._logger.debug("Play tone end" + str(time_to_sleep))
 
 
     def _continuous_tone_loop(self):
-        """Internal loop that writes sine wave chunks until stop event is set."""
         self._logger.debug("Continuous tone started at %d Hz", self._frequency)
 
-        timer = time()
         chunk_duration = (1.0 / self._frequency) # Duration of each chunk to write (one period of the sine wave)
 
-        self._playing = True
-        cycles = 0
-        while not self._stop_continuous_event.is_set():
-            chunk = self._generate_soft_tone(chunk_duration, 0, 0)
-            self._audio_stream.write(chunk)
-            cycles += 1
+        tone_chunk = self._generate_soft_tone(chunk_duration, 0, 0)
+        silence_chunk = self._generate_silence(chunk_duration)
 
-        # Write a short silence to avoid a hard click on release
-        total_time = time() - timer
-        self._logger.debug("Continuous tone stopped in " + str(total_time) + " seconds. Chunk" + str(chunk_duration) + " cycles : " +str(cycles))
-        chunk = self._generate_silence(total_time / 2.0)
-        self._audio_stream.write(chunk)
+        self._playing = True
+        cycles_silence = 0
+        while not self._stop_continuous_event.is_set():
+            if self._continuous_tone_sound:
+                self._audio_stream.write(tone_chunk)
+                cycles_silence=0
+            else:
+                self._audio_stream.write(silence_chunk)
+                cycles_silence += 1
+                if cycles_silence >= 1000:
+                    self._stop_continuous_event.set()
+
         self._playing = False
 
+    def continuous_tone(self, sound : bool):
 
-
-    def start_continuous_tone(self):
-        """
-        Start playing a continuous sinusoidal tone in a background thread.
-        Intended to be called on button-press.
-        Call stop_continuous_tone() on button-release to stop playback.
-
-        :param chunk_duration: Duration (seconds) of each audio chunk written per iteration.
-        """
+        self._continuous_tone_sound = sound
         if self._playing or not self._started:
             self._logger.warning("Continuous tone is already playing or no tone .")
             return
@@ -157,10 +156,6 @@ class ToneGenerator:
 
 
     def stop_continuous_tone(self):
-        """
-        Stop the continuous sinusoidal tone.
-        Intended to be called on button-release.
-        """
         if self._playing:
             self._stop_continuous_event.set()
 

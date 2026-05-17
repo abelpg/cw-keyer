@@ -15,7 +15,7 @@ class CommEmulatorWithKeyer(CommSerial):
 
         self._logger = logging.getLogger(__name__)
 
-    def send(self, duration):
+    def send_signal_background(self, duration):
         self._executor.submit(self._background_send, duration)
 
     def turn_on(self):

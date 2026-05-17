@@ -33,7 +33,7 @@ def high_priority():
         os.nice(-5)
 
 def main(args=None):
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     __logger = logging.getLogger(__name__)
     high_priority()
 

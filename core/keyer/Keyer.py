@@ -155,19 +155,19 @@ class Keyer(DeviceObserver):
         else:
             self._logger.debug("Comm emulator is not running, skipping stop.")
 
-    def proxy_on(self):
+    def proxy_n1mm(self, value : bool):
         if self.is_serial_started():
-            self._comm_emulator_with_keyer.turn_on()
-        self._tone_generator.start_continuous_tone()
+            if value:
+                self._comm_emulator_with_keyer.turn_on()
+            else:
+                self._comm_emulator_with_keyer.turn_off()
 
-    def proxy_off(self):
-        if self.is_serial_started():
-            self._comm_emulator_with_keyer.turn_off()
-        self._tone_generator.stop_continuous_tone()
+        self._tone_generator.continuous_tone(value)
+
 
     def _call_serial(self, duration):
         if self.is_serial_started():
-            self._comm_emulator_with_keyer.send(duration)
+            self._comm_emulator_with_keyer.send_signal_background(duration)
 
 
     """
@@ -213,9 +213,7 @@ class Keyer(DeviceObserver):
             time_send = self._dah_time
 
         self._call_serial(time_send)
-
         self._tone_generator.play_tone(time_send, self._space_time)
-
         self._print_time(timer, dit_dah)
 
 
