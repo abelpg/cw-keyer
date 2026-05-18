@@ -14,9 +14,9 @@ class KeyerItem(Enum):
     DAH = 2
 
 class Mode(Enum):
-    ULTIMATIC = 0
-    IAMBIC_A = 1
-    IAMBIC_B = 1
+    ULTIMATIC = "Ultimatic"
+    IAMBIC_A = "Iambic A"
+    IAMBIC_B = "Iambic B"
 
 
 class Keyer(DeviceObserver):
@@ -24,10 +24,10 @@ class Keyer(DeviceObserver):
     # 1WPM dit = 1200 ms mark, 1200 ms space
     TIME_BASE = 1200
 
-    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None):
+    def __init__(self, wpm : int, frequency: int = 600, amplitude : float = 0.5, output_device: AudioDevice = None, mode=Mode.IAMBIC_B):
         self._logger = logging.getLogger(__name__)
 
-        self._mode = Mode.IAMBIC_B
+        self._mode = mode
 
         # State machine init. dit dah
         self._dit_pressed = False
@@ -191,7 +191,7 @@ class Keyer(DeviceObserver):
         dah_time = dit_time * 3.0
         space_time = dit_time
 
-        self._logger.info("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s".format(dit_time, dah_time,space_time))
+        self._logger.info("Total time for PARIS: DIT time: {}s, DAH time: {}s,  Space time: {}s in {} mode".format(dit_time, dah_time,space_time, self._mode))
         return dit_time, dah_time, space_time
 
     def _print_time(self, time_init, action):

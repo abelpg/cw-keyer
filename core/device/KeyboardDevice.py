@@ -22,11 +22,15 @@ class KeyboardDevice(Device):
 
     @staticmethod
     def _is_key_dit(key):
-        return hasattr(key, 'vk') and key.vk == 186
+        return key == Key.ctrl_l or KeyboardDevice._has_vk(key, 186)
 
     @staticmethod
-    def _is_key_dah(key):
-        return hasattr(key, 'vk') and key.vk == 187
+    def _is_key_dah(key:int):
+        return key == Key.ctrl_r or KeyboardDevice._has_vk(key, 187)
+
+    @staticmethod
+    def _has_vk(key, value: int):
+        return hasattr(key, 'vk') and key.vk == value
 
     def _on_press_key(self, key):
         if self._is_key_dah(key) and not self._dah_pressed:
